@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const storage = window.HabitTrackerStorage;
+    const profile = storage.getCurrentProfile();
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const unlockedCountEl = document.getElementById('achievement-unlocked-count');
     const unlockedCopyEl = document.getElementById('achievement-unlocked-copy');
@@ -7,13 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const allAchievementsGridEl = document.getElementById('all-achievements-grid');
     const badgeProgressSummaryEl = document.getElementById('badge-progress-summary');
 
-    let habits = HabitTrackerData.normalizeHabits(JSON.parse(localStorage.getItem('habits')) || []);
-    let darkMode = localStorage.getItem('darkMode') === 'true';
+    let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
+    let darkMode = profile.darkMode;
 
     function toggleDarkMode() {
         darkMode = !darkMode;
         document.body.classList.toggle('dark-mode', darkMode);
-        localStorage.setItem('darkMode', darkMode);
+        storage.setDarkMode(darkMode);
         darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     }
 

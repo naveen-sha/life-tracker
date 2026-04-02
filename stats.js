@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const storage = window.HabitTrackerStorage;
+    const profile = storage.getCurrentProfile();
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const totalHabitsEl = document.getElementById('total-habits');
     const longestStreakEl = document.getElementById('longest-streak');
@@ -9,8 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const statsAchievementSummaryEl = document.getElementById('stats-achievement-summary');
     const statsBestHabitEl = document.getElementById('stats-best-habit');
 
-    let habits = HabitTrackerData.normalizeHabits(JSON.parse(localStorage.getItem('habits')) || []);
-    let darkMode = localStorage.getItem('darkMode') === 'true';
+    let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
+    let darkMode = profile.darkMode;
     let monthlyChart = null;
     let yearlyChart = null;
     let categoryChart = null;
@@ -18,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleDarkMode() {
         darkMode = !darkMode;
         document.body.classList.toggle('dark-mode', darkMode);
-        localStorage.setItem('darkMode', darkMode);
+        storage.setDarkMode(darkMode);
         darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     }
 

@@ -1,18 +1,22 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const storage = window.HabitTrackerStorage;
+    const profile = storage.getCurrentProfile();
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const prevMonthBtn = document.getElementById('prev-month');
     const nextMonthBtn = document.getElementById('next-month');
     const currentMonthEl = document.getElementById('current-month');
     const calendarDaysEl = document.getElementById('calendar-days');
 
-    let habits = JSON.parse(localStorage.getItem('habits')) || [];
-    let darkMode = localStorage.getItem('darkMode') === 'true';
+    let habits = typeof HabitTrackerData !== 'undefined'
+        ? HabitTrackerData.normalizeHabits(profile.habits || [])
+        : (profile.habits || []);
+    let darkMode = profile.darkMode;
     let currentDate = new Date();
 
     function toggleDarkMode() {
         darkMode = !darkMode;
         document.body.classList.toggle('dark-mode', darkMode);
-        localStorage.setItem('darkMode', darkMode);
+        storage.setDarkMode(darkMode);
         darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     }
 

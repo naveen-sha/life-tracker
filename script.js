@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const storage = window.HabitTrackerStorage;
+    const profile = storage.getCurrentProfile();
     const habitInput = document.getElementById('habit-input');
     const categorySelect = document.getElementById('category-select');
     const sortSelect = document.getElementById('sort-select');
@@ -30,23 +32,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const liveDateTimeEl = document.getElementById('live-datetime');
     const liveDateCopyEl = document.getElementById('live-date-copy');
 
-    let habits = HabitTrackerData.normalizeHabits(JSON.parse(localStorage.getItem('habits')) || []);
-    let darkMode = localStorage.getItem('darkMode') === 'true';
-    let categories = JSON.parse(localStorage.getItem('categories')) || HabitTrackerData.DEFAULT_CATEGORIES;
+    let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
+    let darkMode = profile.darkMode;
+    let categories = profile.categories || HabitTrackerData.DEFAULT_CATEGORIES;
     let progressChart = null;
 
     function saveHabits() {
-        localStorage.setItem('habits', JSON.stringify(habits));
+        storage.saveHabits(habits);
     }
 
     function saveCategories() {
-        localStorage.setItem('categories', JSON.stringify(categories));
+        storage.saveCategories(categories);
     }
 
     function toggleDarkMode() {
         darkMode = !darkMode;
         document.body.classList.toggle('dark-mode', darkMode);
-        localStorage.setItem('darkMode', darkMode);
+        storage.setDarkMode(darkMode);
         darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     }
 
@@ -329,12 +331,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateDailyTip() {
         const today = HabitTrackerData.getTodayString();
-        const lastTipUpdate = localStorage.getItem('lastTipUpdate');
+        const lastTipUpdate = storage.getMeta('lastTipUpdate');
 
         if (lastTipUpdate !== today) {
             const randomTip = HabitTrackerData.DAILY_TIPS[Math.floor(Math.random() * HabitTrackerData.DAILY_TIPS.length)];
             dailyTipEl.textContent = randomTip;
-            localStorage.setItem('lastTipUpdate', today);
+            storage.setMeta('lastTipUpdate', today);
         } else {
             dailyTipEl.textContent = dailyTipEl.textContent || HabitTrackerData.DAILY_TIPS[0];
         }
@@ -546,12 +548,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     const today = HabitTrackerData.getTodayString();
-    const lastReset = localStorage.getItem('lastReset');
+    const lastReset = storage.getMeta('lastReset');
     if (lastReset !== today) {
         habits.forEach(habit => {
             habit.completedToday = false;
         });
-        localStorage.setItem('lastReset', today);
+        storage.setMeta('lastReset', today);
         saveHabits();
     }
 

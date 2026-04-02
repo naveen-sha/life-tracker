@@ -936,6 +936,93 @@ body.dark-mode .settings-section h2 {
     margin-bottom: 15px;
 }
 
+.settings-caption {
+    margin: 6px 0;
+    color: #6c757d;
+}
+
+body.dark-mode .settings-caption {
+    color: #adb5bd;
+}
+
+.profile-summary-card,
+.profile-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 123, 255, 0.12);
+    margin-bottom: 14px;
+}
+
+body.dark-mode .profile-summary-card,
+body.dark-mode .profile-item {
+    background: rgba(58, 58, 94, 0.92);
+    border-color: rgba(77, 171, 247, 0.24);
+}
+
+.profile-item.active {
+    box-shadow: 0 10px 24px rgba(0, 123, 255, 0.12);
+    border-color: rgba(0, 123, 255, 0.28);
+}
+
+body.dark-mode .profile-item.active {
+    box-shadow: 0 10px 24px rgba(77, 171, 247, 0.12);
+}
+
+.profile-item p,
+.profile-item small,
+.profile-summary-card p {
+    margin: 4px 0 0;
+}
+
+.profile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.profile-create-row {
+    margin-bottom: 16px;
+}
+
+#profile-name-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+body.dark-mode #profile-name-input {
+    background-color: #3a3a5e;
+    border-color: #4dabf7;
+    color: #e0e0e0;
+}
+
+#create-profile-btn {
+    padding: 10px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#create-profile-btn:hover {
+    background-color: #0069d9;
+}
+
 .setting-item label {
     font-weight: 500;
 }
@@ -1046,6 +1133,13 @@ body.dark-mode .category-item {
 
 .btn-danger:hover {
     background-color: #c82333;
+}
+
+.btn-secondary:disabled,
+.btn-danger:disabled,
+#create-profile-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 /* Enhanced Sidebar */
@@ -2071,6 +2165,15 @@ body.dark-mode .category-item {
 
     .nav-search {
         display: none;
+    }
+
+    .profile-summary-card,
+    .profile-item,
+    .setting-item,
+    .profile-actions,
+    .add-category {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     /* Mobile Stats */
