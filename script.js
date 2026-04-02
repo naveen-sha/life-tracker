@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const habitInput = document.getElementById('habit-input');
     const categorySelect = document.getElementById('category-select');
+    const sortSelect = document.getElementById('sort-select');
     const addHabitBtn = document.getElementById('add-habit-btn');
     const habitsList = document.getElementById('habits-list');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -17,44 +18,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarClose = document.getElementById('sidebar-close');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
     const navMenu = document.querySelector('.nav-menu');
+    const suggestionChipsEl = document.getElementById('suggestion-chips');
+    const dashboardWelcomeEl = document.getElementById('dashboard-welcome');
+    const dashboardSubtitleEl = document.getElementById('dashboard-subtitle');
+    const achievementProgressTextEl = document.getElementById('achievement-progress-text');
+    const achievementProgressBarEl = document.getElementById('achievement-progress-bar');
+    const heroProgressCopyEl = document.getElementById('hero-progress-copy');
+    const focusHabitCardEl = document.getElementById('focus-habit-card');
+    const nextAchievementsEl = document.getElementById('next-achievements');
+    const categoryHighlightsEl = document.getElementById('category-highlights');
+    const liveDateTimeEl = document.getElementById('live-datetime');
+    const liveDateCopyEl = document.getElementById('live-date-copy');
 
-    let habits = JSON.parse(localStorage.getItem('habits')) || [];
+    let habits = HabitTrackerData.normalizeHabits(JSON.parse(localStorage.getItem('habits')) || []);
     let darkMode = localStorage.getItem('darkMode') === 'true';
-    let categories = JSON.parse(localStorage.getItem('categories')) || ['General', 'Health', 'Productivity', 'Learning'];
-
-    const quotes = [
-        "\"The journey of a thousand miles begins with a single step.\" - Lao Tzu",
-        "\"Success is not final, failure is not fatal: It is the courage to continue that counts.\" - Winston Churchill",
-        "\"Don't watch the clock; do what it does. Keep going.\" - Sam Levenson",
-        "\"The only way to do great work is to love what you do.\" - Steve Jobs",
-        "\"Believe you can and you're halfway there.\" - Theodore Roosevelt"
-    ];
-
-    const achievements = [
-        { id: 'first-habit', name: 'First Steps', description: 'Create your first habit', icon: 'fas fa-seedling', condition: () => habits.length >= 1 },
-        { id: 'week-streak', name: 'Week Warrior', description: 'Maintain a 7-day streak', icon: 'fas fa-fire', condition: () => habits.some(h => h.streak >= 7) },
-        { id: 'month-streak', name: 'Month Master', description: 'Maintain a 30-day streak', icon: 'fas fa-crown', condition: () => habits.some(h => h.streak >= 30) },
-        { id: 'five-habits', name: 'Habit Collector', description: 'Create 5 habits', icon: 'fas fa-th-list', condition: () => habits.length >= 5 },
-        { id: 'perfect-week', name: 'Perfect Week', description: 'Complete all habits for 7 days', icon: 'fas fa-star', condition: () => {
-            const last7Days = getLast7Days();
-            return habits.length > 0 && habits.every(habit => last7Days.every(day => habit.history.includes(day)));
-        }},
-        { id: 'hundred-completions', name: 'Century Club', description: 'Reach 100 total completions', icon: 'fas fa-trophy', condition: () => habits.reduce((sum, h) => sum + h.history.length, 0) >= 100 }
-    ];
-
-    const dailyTips = [
-        "Start small! Focus on building one habit at a time.",
-        "Consistency beats perfection. Better to do a little every day than a lot once a week.",
-        "Track your progress visually to stay motivated.",
-        "Reward yourself when you reach milestones.",
-        "If you miss a day, get back on track immediately - don't let it become two days.",
-        "Share your goals with friends for accountability.",
-        "Set specific times for your habits to make them routine.",
-        "Review your progress weekly and adjust as needed."
-    ];
+    let categories = JSON.parse(localStorage.getItem('categories')) || HabitTrackerData.DEFAULT_CATEGORIES;
+    let progressChart = null;
 
     function saveHabits() {
         localStorage.setItem('habits', JSON.stringify(habits));
+    }
+
+    function saveCategories() {
+        localStorage.setItem('categories', JSON.stringify(categories));
     }
 
     function toggleDarkMode() {
@@ -74,200 +60,221 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function getLast7Days() {
-        const days = [];
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            days.push(date.toDateString());
+    function updateLiveDateTime() {
+        const now = new Date();
+        liveDateTimeEl.textContent = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        liveDateCopyEl.textContent = now.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    function sortHabits(habitsToSort) {
+        const mode = sortSelect.value;
+        const sorted = [...habitsToSort];
+
+        if (mode === 'streak') {
+            sorted.sort((a, b) => b.streak - a.streak || b.history.length - a.history.length);
+        } else if (mode === 'recent') {
+            sorted.sort((a, b) => b.history.length - a.history.length || b.streak - a.streak);
+        } else if (mode === 'name') {
+            sorted.sort((a, b) => a.name.localeCompare(b.name));
+        } else {
+            sorted.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
         }
-        return days;
+
+        return sorted;
+    }
+
+    function refreshAll() {
+        renderHabits();
+        renderChart();
+        updateStats();
+        renderAchievements();
+        updateWeeklySummary();
+        renderHero();
+        renderFocusHabit();
+        renderNextAchievements();
+        renderCategoryHighlights();
+    }
+
+    function handleHabitToggle(habit, checked) {
+        habit.completedToday = checked;
+        const today = HabitTrackerData.getTodayString();
+
+        if (checked) {
+            if (!habit.history.includes(today)) {
+                habit.history.push(today);
+                habit.streak += 1;
+
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+            }
+        } else {
+            const index = habit.history.indexOf(today);
+            if (index > -1) {
+                habit.history.splice(index, 1);
+            }
+            habit.streak = Math.max(0, habit.streak - 1);
+        }
+
+        saveHabits();
+        refreshAll();
+    }
+
+    function deleteHabit(habit) {
+        habits = habits.filter(item => item !== habit);
+        saveHabits();
+        refreshAll();
+    }
+
+    function createHabitCard(habit) {
+        const habitItem = document.createElement('div');
+        habitItem.className = 'habit-item';
+
+        const last30Rate = HabitTrackerData.getHabitCompletionRate(habit, 30);
+        const level = HabitTrackerData.getHabitLevel(habit);
+        const last7Days = HabitTrackerData.getLastNDays(7);
+
+        habitItem.innerHTML = `
+            <div class="habit-header">
+                <div>
+                    <span class="habit-name">${habit.name}</span>
+                    <div class="habit-meta-row">
+                        <span class="habit-tag">${habit.category}</span>
+                        <span class="habit-tag">${level}</span>
+                        <span class="habit-tag">${last30Rate.percentage}% in 30 days</span>
+                    </div>
+                </div>
+                <div class="habit-actions">
+                    <label class="checkbox-wrap">
+                        <input type="checkbox" class="checkbox" ${habit.completedToday ? 'checked' : ''}>
+                    </label>
+                    <div class="streak-container">
+                        <span class="streak">🔥 ${habit.streak}</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width:${Math.min((habit.streak / 30) * 100, 100)}%"></div>
+                        </div>
+                    </div>
+                    <button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+            </div>
+        `;
+
+        const checkbox = habitItem.querySelector('.checkbox');
+        const deleteBtn = habitItem.querySelector('.delete-btn');
+
+        checkbox.addEventListener('change', () => handleHabitToggle(habit, checkbox.checked));
+        deleteBtn.addEventListener('click', () => deleteHabit(habit));
+
+        const progressTable = document.createElement('table');
+        progressTable.className = 'progress-table';
+        const thead = document.createElement('thead');
+        const tbody = document.createElement('tbody');
+
+        const headerRow = document.createElement('tr');
+        last7Days.forEach(day => {
+            const th = document.createElement('th');
+            th.textContent = HabitTrackerData.getDateLabel(day, { weekday: 'short' });
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+
+        const dataRow = document.createElement('tr');
+        last7Days.forEach(day => {
+            const td = document.createElement('td');
+            if (habit.history.includes(day)) {
+                td.innerHTML = '<i class="fas fa-check-circle"></i>';
+                td.className = 'completed';
+            } else {
+                td.innerHTML = '<i class="far fa-circle"></i>';
+                td.className = 'not-completed';
+            }
+            dataRow.appendChild(td);
+        });
+        tbody.appendChild(dataRow);
+        progressTable.appendChild(thead);
+        progressTable.appendChild(tbody);
+        habitItem.appendChild(progressTable);
+
+        return habitItem;
+    }
+
+    function renderHabits(filteredHabits) {
+        const habitsToRender = sortHabits(filteredHabits || habits);
+        habitsList.innerHTML = '';
+
+        if (!habitsToRender.length) {
+            habitsList.innerHTML = '<div class="empty-state-card">No habits match right now. Try adding one or clear the search.</div>';
+            return;
+        }
+
+        const grouped = habitsToRender.reduce((acc, habit) => {
+            if (!acc[habit.category]) {
+                acc[habit.category] = [];
+            }
+            acc[habit.category].push(habit);
+            return acc;
+        }, {});
+
+        Object.keys(grouped).forEach(category => {
+            const section = document.createElement('div');
+            section.className = 'category-section';
+            section.innerHTML = `<h2 class="category-title">${category}</h2>`;
+            grouped[category].forEach(habit => section.appendChild(createHabitCard(habit)));
+            habitsList.appendChild(section);
+        });
     }
 
     function updateStats() {
-        const totalHabits = habits.length;
-        const longestStreak = habits.reduce((max, habit) => Math.max(max, habit.streak), 0);
-        const totalCompletions = habits.reduce((sum, habit) => sum + habit.history.length, 0);
-        const today = new Date().toDateString();
-        const todayCompletions = habits.reduce((sum, habit) => sum + (habit.history.includes(today) ? 1 : 0), 0);
-
-        totalHabitsEl.textContent = totalHabits;
-        longestStreakEl.textContent = longestStreak;
-        totalCompletionsEl.textContent = totalCompletions;
-        todayCompletionsEl.textContent = todayCompletions;
-
-        motivationQuoteEl.textContent = quotes[Math.floor(Math.random() * quotes.length)];
-    }
-
-    function renderHabits(filteredHabits = null) {
-        const habitsToRender = filteredHabits || habits;
-        habitsList.innerHTML = '';
-        const categoriesObj = {};
-        const last7Days = getLast7Days();
-
-        habitsToRender.forEach(habit => {
-            if (!categoriesObj[habit.category]) {
-                categoriesObj[habit.category] = [];
-            }
-            categoriesObj[habit.category].push(habit);
-        });
-
-        for (const category in categoriesObj) {
-            const categorySection = document.createElement('div');
-            categorySection.className = 'category-section';
-
-            const categoryTitle = document.createElement('h2');
-            categoryTitle.className = 'category-title';
-            categoryTitle.textContent = category;
-            categorySection.appendChild(categoryTitle);
-
-            categoriesObj[category].forEach((habit) => {
-                const habitItem = document.createElement('div');
-                habitItem.className = 'habit-item';
-
-                const habitHeader = document.createElement('div');
-                habitHeader.className = 'habit-header';
-
-                const habitName = document.createElement('span');
-                habitName.className = 'habit-name';
-                habitName.textContent = habit.name;
-
-                const habitActions = document.createElement('div');
-                habitActions.className = 'habit-actions';
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'checkbox';
-                checkbox.checked = habit.completedToday;
-                checkbox.addEventListener('change', () => {
-                    habit.completedToday = checkbox.checked;
-                    const today = new Date().toDateString();
-                    if (checkbox.checked) {
-                        if (!habit.history.includes(today)) {
-                            habit.history.push(today);
-                            habit.streak++;
-                            confetti({
-                                particleCount: 100,
-                                spread: 70,
-                                origin: { y: 0.6 }
-                            });
-                        }
-                    } else {
-                        const index = habit.history.indexOf(today);
-                        if (index > -1) {
-                            habit.history.splice(index, 1);
-                            habit.streak = Math.max(0, habit.streak - 1);
-                        }
-                    }
-                    saveHabits();
-                    renderHabits();
-                    renderChart();
-                    updateStats();
-                    renderAchievements();
-                    updateWeeklySummary();
-                });
-
-                const streakContainer = document.createElement('div');
-                streakContainer.className = 'streak-container';
-
-                const streak = document.createElement('span');
-                streak.className = 'streak';
-                streak.textContent = `🔥 ${habit.streak}`;
-
-                const progressBar = document.createElement('div');
-                progressBar.className = 'progress-bar';
-                const progressFill = document.createElement('div');
-                progressFill.className = 'progress-fill';
-                progressFill.style.width = `${Math.min((habit.streak / 30) * 100, 100)}%`;
-                progressBar.appendChild(progressFill);
-
-                streakContainer.appendChild(streak);
-                streakContainer.appendChild(progressBar);
-
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
-                deleteBtn.addEventListener('click', () => {
-                    habits.splice(habits.indexOf(habit), 1);
-                    saveHabits();
-                    renderHabits();
-                    renderChart();
-                    updateStats();
-                    renderAchievements();
-                    updateWeeklySummary();
-                });
-
-                habitActions.appendChild(checkbox);
-                habitActions.appendChild(streakContainer);
-                habitActions.appendChild(deleteBtn);
-
-                habitHeader.appendChild(habitName);
-                habitHeader.appendChild(habitActions);
-
-                habitItem.appendChild(habitHeader);
-
-                // Add progress table
-                const progressTable = document.createElement('table');
-                progressTable.className = 'progress-table';
-                const thead = document.createElement('thead');
-                const tbody = document.createElement('tbody');
-
-                const headerRow = document.createElement('tr');
-                last7Days.forEach(day => {
-                    const th = document.createElement('th');
-                    th.textContent = new Date(day).toLocaleDateString('en-US', { weekday: 'short' });
-                    headerRow.appendChild(th);
-                });
-                thead.appendChild(headerRow);
-
-                const dataRow = document.createElement('tr');
-                last7Days.forEach(day => {
-                    const td = document.createElement('td');
-                    if (habit.history.includes(day)) {
-                        td.innerHTML = '<i class="fas fa-check-circle"></i>';
-                        td.className = 'completed';
-                    } else {
-                        td.innerHTML = '<i class="far fa-circle"></i>';
-                        td.className = 'not-completed';
-                    }
-                    dataRow.appendChild(td);
-                });
-                tbody.appendChild(dataRow);
-
-                progressTable.appendChild(thead);
-                progressTable.appendChild(tbody);
-                habitItem.appendChild(progressTable);
-
-                categorySection.appendChild(habitItem);
-            });
-
-            habitsList.appendChild(categorySection);
-        }
+        const metrics = HabitTrackerData.getMetrics(habits);
+        totalHabitsEl.textContent = metrics.totalHabits;
+        longestStreakEl.textContent = metrics.longestStreak;
+        totalCompletionsEl.textContent = metrics.totalCompletions;
+        todayCompletionsEl.textContent = metrics.todayCompletions;
+        motivationQuoteEl.textContent = HabitTrackerData.QUOTES[Math.floor(Math.random() * HabitTrackerData.QUOTES.length)];
     }
 
     function renderChart() {
         const ctx = document.getElementById('progressChart').getContext('2d');
-        const last7Days = getLast7Days();
-        const dailyCompletions = last7Days.map(day => {
-            return habits.reduce((count, habit) => {
-                return count + (habit.history.includes(day) ? 1 : 0);
-            }, 0);
-        });
+        const trend = HabitTrackerData.getMonthlyTrend(habits);
 
-        new Chart(ctx, {
+        if (progressChart) {
+            progressChart.destroy();
+        }
+
+        progressChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: last7Days.map(day => new Date(day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+                labels: trend.map(item => item.label),
                 datasets: [{
                     label: 'Daily Completions',
-                    data: dailyCompletions,
-                    backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                    data: trend.map(item => item.completions),
+                    backgroundColor: 'rgba(0, 123, 255, 0.18)',
                     borderColor: 'rgba(0, 123, 255, 1)',
-                    borderWidth: 2,
-                    fill: true
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.35
                 }]
             },
             options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true,
@@ -280,122 +287,197 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function filterHabits(searchTerm) {
-        const filteredHabits = habits.filter(habit =>
-            habit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            habit.category.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        renderHabits(filteredHabits);
-    }
-
     function renderAchievements() {
+        const achievements = HabitTrackerData.getAchievementStatus(habits);
         achievementsList.innerHTML = '';
+
         achievements.forEach(achievement => {
             const achievementEl = document.createElement('div');
-            achievementEl.className = 'achievement';
-            
-            const isUnlocked = achievement.condition();
-            if (isUnlocked) {
-                achievementEl.classList.add('unlocked');
-            }
-
+            achievementEl.className = `achievement${achievement.unlocked ? ' unlocked' : ''}`;
             achievementEl.innerHTML = `
                 <i class="${achievement.icon} achievement-icon"></i>
                 <div class="achievement-text">
                     <strong>${achievement.name}</strong>
                     <small>${achievement.description}</small>
+                    <div class="mini-progress-bar"><span style="width:${achievement.percentage}%"></span></div>
                 </div>
+                <span class="achievement-value">${achievement.current}/${achievement.target}</span>
             `;
-
             achievementsList.appendChild(achievementEl);
         });
     }
 
     function updateWeeklySummary() {
+        const weekly = HabitTrackerData.getWeeklyHabitSummary(habits);
         weeklySummaryEl.innerHTML = '';
-        const last7Days = getLast7Days();
-        
-        habits.forEach(habit => {
-            const completedDays = last7Days.filter(day => habit.history.includes(day)).length;
-            const percentage = Math.round((completedDays / 7) * 100);
-            
+
+        if (!weekly.length) {
+            weeklySummaryEl.innerHTML = '<div class="mini-message-card">Your weekly summary will appear after you add habits.</div>';
+            return;
+        }
+
+        weekly.slice(0, 6).forEach(habit => {
             const summaryItem = document.createElement('div');
             summaryItem.className = 'weekly-summary-item';
             summaryItem.innerHTML = `
                 <span class="habit-name">${habit.name}</span>
-                <span class="progress">${completedDays}/7 (${percentage}%)</span>
+                <span class="progress">${habit.completedDays}/7 (${habit.percentage}%)</span>
             `;
-            
             weeklySummaryEl.appendChild(summaryItem);
         });
     }
 
     function updateDailyTip() {
-        const today = new Date().toDateString();
+        const today = HabitTrackerData.getTodayString();
         const lastTipUpdate = localStorage.getItem('lastTipUpdate');
-        
+
         if (lastTipUpdate !== today) {
-            const randomTip = dailyTips[Math.floor(Math.random() * dailyTips.length)];
+            const randomTip = HabitTrackerData.DAILY_TIPS[Math.floor(Math.random() * HabitTrackerData.DAILY_TIPS.length)];
             dailyTipEl.textContent = randomTip;
             localStorage.setItem('lastTipUpdate', today);
+        } else {
+            dailyTipEl.textContent = dailyTipEl.textContent || HabitTrackerData.DAILY_TIPS[0];
         }
     }
 
-    addHabitBtn.addEventListener('click', function() {
-        const habitName = habitInput.value.trim();
-        const category = categorySelect.value;
-        if (habitName) {
-            habits.push({
-                name: habitName,
-                category: category,
-                streak: 0,
-                completedToday: false,
-                history: []
+    function renderHero() {
+        const metrics = HabitTrackerData.getMetrics(habits);
+        const achievements = HabitTrackerData.getAchievementStatus(habits);
+        const unlocked = achievements.filter(item => item.unlocked).length;
+        const completionPercent = achievements.length ? Math.round((unlocked / achievements.length) * 100) : 0;
+        const next = HabitTrackerData.getNextAchievements(habits, 1)[0];
+
+        if (!metrics.totalHabits) {
+            dashboardWelcomeEl.textContent = 'Your streak story starts here';
+            dashboardSubtitleEl.textContent = 'Add a habit and start building a routine you can actually keep for the whole year.';
+        } else if (metrics.weeklyCompletionRate >= 70) {
+            dashboardWelcomeEl.textContent = 'You are in a strong rhythm';
+            dashboardSubtitleEl.textContent = `You have completed ${metrics.weeklyCompletionRate}% of this week’s habit slots. Keep that energy going.`;
+        } else {
+            dashboardWelcomeEl.textContent = 'Small check-ins will move this fast';
+            dashboardSubtitleEl.textContent = `You have ${metrics.totalCompletions} total completions so far. Today is a good day to push the streak forward.`;
+        }
+
+        achievementProgressTextEl.textContent = `${unlocked} of ${achievements.length} unlocked`;
+        achievementProgressBarEl.style.width = `${completionPercent}%`;
+        heroProgressCopyEl.textContent = next
+            ? `${next.name} is next: ${next.current}/${next.target}`
+            : 'Everything is unlocked. Set a bigger challenge next.';
+    }
+
+    function renderFocusHabit() {
+        const bestHabit = HabitTrackerData.getMetrics(habits).bestHabit;
+
+        if (!bestHabit) {
+            focusHabitCardEl.innerHTML = '<div class="mini-message-card">Your focus habit will appear once you start tracking.</div>';
+            return;
+        }
+
+        const monthlyRate = HabitTrackerData.getHabitCompletionRate(bestHabit, 30);
+        focusHabitCardEl.innerHTML = `
+            <div class="focus-card">
+                <strong>${bestHabit.name}</strong>
+                <p>${bestHabit.category} is currently your strongest habit.</p>
+                <div class="summary-row-card">
+                    <div>
+                        <strong>${bestHabit.streak} day streak</strong>
+                        <p>${monthlyRate.completed}/30 completions this month</p>
+                    </div>
+                    <span>${HabitTrackerData.getHabitLevel(bestHabit)}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderNextAchievements() {
+        const nextItems = HabitTrackerData.getNextAchievements(habits, 3);
+        nextAchievementsEl.innerHTML = '';
+
+        if (!nextItems.length) {
+            nextAchievementsEl.innerHTML = '<div class="mini-message-card">No locked achievements left. You cleared the board.</div>';
+            return;
+        }
+
+        nextItems.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'mini-progress-card';
+            card.innerHTML = `
+                <div class="mini-progress-header">
+                    <div>
+                        <strong>${item.name}</strong>
+                        <p>${item.description}</p>
+                    </div>
+                    <span>${item.current}/${item.target}</span>
+                </div>
+                <div class="mini-progress-bar"><span style="width:${item.percentage}%"></span></div>
+            `;
+            nextAchievementsEl.appendChild(card);
+        });
+    }
+
+    function renderCategoryHighlights() {
+        const entries = Object.entries(HabitTrackerData.getCategoryBreakdown(habits));
+        categoryHighlightsEl.innerHTML = '';
+
+        if (!entries.length) {
+            categoryHighlightsEl.innerHTML = '<div class="mini-message-card">Category highlights will appear after you add habits.</div>';
+            return;
+        }
+
+        entries.sort((a, b) => b[1].completions - a[1].completions).slice(0, 4).forEach(([name, data]) => {
+            const card = document.createElement('div');
+            card.className = 'summary-row-card';
+            card.innerHTML = `
+                <div>
+                    <strong>${name}</strong>
+                    <p>${data.habits} habits</p>
+                </div>
+                <span>${data.completions} wins</span>
+            `;
+            categoryHighlightsEl.appendChild(card);
+        });
+    }
+
+    function filterHabits(searchTerm) {
+        const filtered = habits.filter(habit =>
+            habit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            habit.category.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        renderHabits(filtered);
+    }
+
+    function addHabit(name, category) {
+        const habitName = name.trim();
+        if (!habitName) {
+            return;
+        }
+
+        habits.push({
+            name: habitName,
+            category: category || categorySelect.value,
+            streak: 0,
+            completedToday: false,
+            history: []
+        });
+
+        saveHabits();
+        refreshAll();
+    }
+
+    function renderSuggestionChips() {
+        suggestionChipsEl.innerHTML = '';
+
+        HabitTrackerData.getSuggestions(categories).forEach(suggestion => {
+            const button = document.createElement('button');
+            button.className = 'suggestion-chip';
+            button.textContent = suggestion;
+            button.addEventListener('click', () => {
+                habitInput.value = suggestion;
+                habitInput.focus();
             });
-            habitInput.value = '';
-            saveHabits();
-            renderHabits();
-            renderChart();
-            updateStats();
-            renderAchievements();
-            updateWeeklySummary();
-        }
-    });
-
-    darkModeToggle.addEventListener('click', toggleDarkMode);
-
-    // Search functionality
-    searchInput.addEventListener('input', function() {
-        filterHabits(this.value);
-    });
-
-    // Mobile navigation
-    sidebarToggle.addEventListener('click', function() {
-        toggleMobileMenu();
-        toggleSidebar();
-    });
-
-    if (sidebarClose) {
-        sidebarClose.addEventListener('click', function() {
-            closeMobileMenu();
-            closeSidebar();
+            suggestionChipsEl.appendChild(button);
         });
     }
-
-    if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', function() {
-            closeMobileMenu();
-            closeSidebar();
-        });
-    }
-
-    // Close mobile menu when clicking nav links
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', function() {
-            closeMobileMenu();
-            closeSidebar();
-        });
-    });
 
     function toggleMobileMenu() {
         navMenu.classList.toggle('mobile-open');
@@ -419,8 +501,51 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.style.overflow = '';
     }
 
-    // Reset completedToday at the start of a new day
-    const today = new Date().toDateString();
+    addHabitBtn.addEventListener('click', function() {
+        addHabit(habitInput.value, categorySelect.value);
+        habitInput.value = '';
+    });
+
+    habitInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            addHabit(habitInput.value, categorySelect.value);
+            habitInput.value = '';
+        }
+    });
+
+    darkModeToggle.addEventListener('click', toggleDarkMode);
+    sortSelect.addEventListener('change', () => renderHabits());
+    searchInput.addEventListener('input', function() {
+        filterHabits(this.value);
+    });
+
+    sidebarToggle.addEventListener('click', function() {
+        toggleMobileMenu();
+        toggleSidebar();
+    });
+
+    if (sidebarClose) {
+        sidebarClose.addEventListener('click', function() {
+            closeMobileMenu();
+            closeSidebar();
+        });
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', function() {
+            closeMobileMenu();
+            closeSidebar();
+        });
+    }
+
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function() {
+            closeMobileMenu();
+            closeSidebar();
+        });
+    });
+
+    const today = HabitTrackerData.getTodayString();
     const lastReset = localStorage.getItem('lastReset');
     if (lastReset !== today) {
         habits.forEach(habit => {
@@ -430,14 +555,13 @@ document.addEventListener('DOMContentLoaded', function() {
         saveHabits();
     }
 
-    // Initialize
+    saveCategories();
     document.body.classList.toggle('dark-mode', darkMode);
     darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     updateCategorySelect();
-    renderHabits();
-    renderChart();
-    updateStats();
-    renderAchievements();
-    updateWeeklySummary();
+    updateLiveDateTime();
+    setInterval(updateLiveDateTime, 1000);
     updateDailyTip();
+    renderSuggestionChips();
+    refreshAll();
 });

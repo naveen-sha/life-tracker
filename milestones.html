@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker - Milestones</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-logo"><i class="fas fa-calendar-check"></i> Habit Tracker</h1>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="index.html" class="nav-link"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li class="nav-item"><a href="stats.html" class="nav-link"><i class="fas fa-chart-bar"></i> Statistics</a></li>
+                <li class="nav-item"><a href="calendar.html" class="nav-link"><i class="fas fa-calendar-alt"></i> Calendar</a></li>
+                <li class="nav-item"><a href="achievements.html" class="nav-link"><i class="fas fa-trophy"></i> Achievements</a></li>
+                <li class="nav-item"><a href="milestones.html" class="nav-link active"><i class="fas fa-road"></i> Milestones</a></li>
+                <li class="nav-item"><a href="settings.html" class="nav-link"><i class="fas fa-cog"></i> Settings</a></li>
+            </ul>
+            <button id="dark-mode-toggle"><i class="fas fa-moon"></i></button>
+        </div>
+    </nav>
+    <div class="container">
+        <section class="page-hero">
+            <div>
+                <p class="eyebrow">Milestone Roadmap</p>
+                <h1><i class="fas fa-road"></i> See your next checkpoint clearly</h1>
+                <p class="hero-copy">This page turns your progress into a roadmap so you always know what to improve next.</p>
+            </div>
+            <div class="hero-badge-card">
+                <span class="hero-badge-label">30-Day Consistency</span>
+                <strong id="roadmap-consistency">0%</strong>
+                <small id="roadmap-consistency-copy">Your recent completion rate.</small>
+            </div>
+        </section>
+
+        <section class="dashboard-panels">
+            <div class="panel-card">
+                <h2><i class="fas fa-route"></i> Roadmap</h2>
+                <div id="roadmap-list" class="roadmap-list"></div>
+            </div>
+            <div class="panel-card">
+                <h2><i class="fas fa-bolt"></i> Momentum Notes</h2>
+                <div id="momentum-notes" class="stack-list"></div>
+            </div>
+        </section>
+
+        <section class="chart-section">
+            <div class="section-title-row">
+                <h2><i class="fas fa-signal"></i> Category Momentum</h2>
+            </div>
+            <div id="category-momentum" class="stack-list"></div>
+        </section>
+    </div>
+    <script src="app-data.js"></script>
+    <script src="milestones.js"></script>
+</body>
+</html>

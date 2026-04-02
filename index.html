@@ -27,6 +27,8 @@
                     <li class="nav-item"><a href="index.html" class="nav-link active"><i class="fas fa-home"></i> Dashboard</a></li>
                     <li class="nav-item"><a href="stats.html" class="nav-link"><i class="fas fa-chart-bar"></i> Statistics</a></li>
                     <li class="nav-item"><a href="calendar.html" class="nav-link"><i class="fas fa-calendar-alt"></i> Calendar</a></li>
+                    <li class="nav-item"><a href="achievements.html" class="nav-link"><i class="fas fa-trophy"></i> Achievements</a></li>
+                    <li class="nav-item"><a href="milestones.html" class="nav-link"><i class="fas fa-road"></i> Milestones</a></li>
                     <li class="nav-item"><a href="settings.html" class="nav-link"><i class="fas fa-cog"></i> Settings</a></li>
                 </ul>
                 <button id="dark-mode-toggle"><i class="fas fa-moon"></i></button>
@@ -42,6 +44,19 @@
                 </button>
             </div>
             <div id="achievements-list"></div>
+            <div class="sidebar-section">
+                <h3><i class="fas fa-compass"></i> Explore More</h3>
+                <div class="sidebar-links">
+                    <a href="achievements.html" class="sidebar-link-card">
+                        <strong>Achievement Center</strong>
+                        <span>Badges, progress bars, and next wins</span>
+                    </a>
+                    <a href="milestones.html" class="sidebar-link-card">
+                        <strong>Milestone Roadmap</strong>
+                        <span>See your next checkpoints clearly</span>
+                    </a>
+                </div>
+            </div>
             
             <div class="sidebar-section">
                 <h3><i class="fas fa-lightbulb"></i> Daily Tip</h3>
@@ -65,8 +80,45 @@
                 <option value="Productivity">Productivity</option>
                 <option value="Learning">Learning</option>
             </select>
+            <select id="sort-select">
+                <option value="category">Sort: Category</option>
+                <option value="streak">Sort: Highest Streak</option>
+                <option value="recent">Sort: Most Completions</option>
+                <option value="name">Sort: Name</option>
+            </select>
             <button id="add-habit-btn"><i class="fas fa-plus"></i> Add Habit</button>
         </div>
+        <section class="hero-dashboard-card">
+            <div>
+                <p class="eyebrow">Daily Momentum</p>
+                <h2 id="dashboard-welcome">Your streak story starts here</h2>
+                <p id="dashboard-subtitle" class="hero-copy">Add a habit and start building a routine you can actually keep.</p>
+                <div class="hero-actions">
+                    <a href="achievements.html" class="hero-link-btn"><i class="fas fa-trophy"></i> Open Achievement Center</a>
+                    <a href="milestones.html" class="hero-link-btn secondary"><i class="fas fa-road"></i> View Roadmap</a>
+                </div>
+            </div>
+            <div class="hero-progress-panel">
+                <div class="live-time-card">
+                    <span class="hero-badge-label">Current Time</span>
+                    <strong id="live-datetime">--</strong>
+                    <small id="live-date-copy">Loading current date...</small>
+                </div>
+                <span class="hero-badge-label">Badge Progress</span>
+                <strong id="achievement-progress-text">0 of 0 unlocked</strong>
+                <div class="hero-progress-bar">
+                    <span id="achievement-progress-bar"></span>
+                </div>
+                <small id="hero-progress-copy">Your next milestone will appear here.</small>
+            </div>
+        </section>
+        <section class="quick-suggestions">
+            <div class="section-title-row">
+                <h2><i class="fas fa-wand-magic-sparkles"></i> Quick Suggestions</h2>
+                <span class="section-chip">One click add</span>
+            </div>
+            <div id="suggestion-chips" class="suggestion-chips"></div>
+        </section>
         <div class="stats-section">
             <h2><i class="fas fa-chart-line"></i> Quick Stats</h2>
             <div class="stats-grid">
@@ -100,6 +152,20 @@
                 </div>
             </div>
         </div>
+        <section class="dashboard-panels">
+            <div class="panel-card">
+                <h2><i class="fas fa-bullseye"></i> Focus Habit</h2>
+                <div id="focus-habit-card"></div>
+            </div>
+            <div class="panel-card">
+                <h2><i class="fas fa-unlock"></i> Next Achievements</h2>
+                <div id="next-achievements"></div>
+            </div>
+            <div class="panel-card">
+                <h2><i class="fas fa-ranking-star"></i> Top Categories</h2>
+                <div id="category-highlights"></div>
+            </div>
+        </section>
         <div id="habits-list"></div>
         <div class="chart-section">
             <h2><i class="fas fa-chart-area"></i> Progress Overview</h2>
@@ -110,6 +176,7 @@
         </div>
         </main>
     </div>
+    <script src="app-data.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
