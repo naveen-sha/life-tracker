@@ -73,9 +73,41 @@ body.dark-mode .navbar {
     text-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
+.nav-logo-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(0, 123, 255, 0.14), rgba(0, 123, 255, 0.06));
+    box-shadow: inset 0 0 0 1px rgba(0, 123, 255, 0.14);
+}
+
+.nav-logo-mark i:first-child {
+    color: #007bff;
+}
+
+.nav-logo-mark i:last-child {
+    color: #00b894;
+    font-size: 0.95em;
+}
+
 body.dark-mode .nav-logo {
     color: #4dabf7;
     text-shadow: 0 2px 4px rgba(77, 171, 247, 0.3);
+}
+
+body.dark-mode .nav-logo-mark {
+    background: linear-gradient(135deg, rgba(77, 171, 247, 0.18), rgba(0, 184, 148, 0.12));
+    box-shadow: inset 0 0 0 1px rgba(77, 171, 247, 0.16);
+}
+
+body.dark-mode .nav-logo-mark i:first-child {
+    color: #4dabf7;
+}
+
+body.dark-mode .nav-logo-mark i:last-child {
+    color: #55efc4;
 }
 
 .nav-logo:hover {
@@ -109,8 +141,8 @@ body.dark-mode .nav-logo {
 .nav-logo {
     color: #007bff;
     margin: 0;
-    font-weight: 300;
-    transition: color 0.3s;
+    font-weight: 700;
+    transition: all 0.3s ease;
 }
 
 .nav-menu {
