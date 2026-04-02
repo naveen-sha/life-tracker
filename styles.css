@@ -1142,6 +1142,22 @@ body.dark-mode .category-item {
     cursor: not-allowed;
 }
 
+.site-footer {
+    margin-top: auto;
+    padding: 18px 16px 28px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.92rem;
+}
+
+.site-footer p {
+    margin: 0;
+}
+
+body.dark-mode .site-footer {
+    color: rgba(224, 224, 224, 0.86);
+}
+
 /* Enhanced Sidebar */
 .sidebar {
     width: 320px;
