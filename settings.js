@@ -428,6 +428,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     o.type = 'square';
                     o.frequency.setValueAtTime(720, ctx.currentTime);
                     o.frequency.exponentialRampToValueAtTime(940, ctx.currentTime + 0.35);
+                } else if (settings.alarmTone === 'nova') {
+                    o.type = 'sawtooth';
+                    o.frequency.setValueAtTime(380, ctx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(1020, ctx.currentTime + 0.42);
+                } else if (settings.alarmTone === 'orbit') {
+                    o.type = 'triangle';
+                    o.frequency.setValueAtTime(560, ctx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.18);
+                    o.frequency.exponentialRampToValueAtTime(860, ctx.currentTime + 0.5);
+                } else if (settings.alarmTone === 'zen') {
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(340, ctx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(520, ctx.currentTime + 0.6);
+                } else if (settings.alarmTone === 'alert-x') {
+                    o.type = 'square';
+                    o.frequency.setValueAtTime(960, ctx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(680, ctx.currentTime + 0.2);
+                    o.frequency.exponentialRampToValueAtTime(1120, ctx.currentTime + 0.45);
                 } else if (settings.alarmTone === 'pulse') {
                     o.type = 'triangle';
                     o.frequency.setValueAtTime(440, ctx.currentTime);

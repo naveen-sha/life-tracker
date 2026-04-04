@@ -121,6 +121,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     o.type = 'square';
                     o.frequency.setValueAtTime(760, now);
                     o.frequency.exponentialRampToValueAtTime(980, now + 0.24);
+                } else if (tone === 'nova') {
+                    o.type = 'sawtooth';
+                    o.frequency.setValueAtTime(380, now);
+                    o.frequency.exponentialRampToValueAtTime(1020, now + 0.42);
+                } else if (tone === 'orbit') {
+                    o.type = 'triangle';
+                    o.frequency.setValueAtTime(560, now);
+                    o.frequency.exponentialRampToValueAtTime(660, now + 0.18);
+                    o.frequency.exponentialRampToValueAtTime(860, now + 0.5);
+                } else if (tone === 'zen') {
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(340, now);
+                    o.frequency.exponentialRampToValueAtTime(520, now + 0.6);
+                } else if (tone === 'alert-x') {
+                    o.type = 'square';
+                    o.frequency.setValueAtTime(960, now);
+                    o.frequency.exponentialRampToValueAtTime(680, now + 0.2);
+                    o.frequency.exponentialRampToValueAtTime(1120, now + 0.45);
                 } else if (tone === 'pulse') {
                     o.type = 'triangle';
                     o.frequency.setValueAtTime(420, now);

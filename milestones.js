@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = document.createElement('div');
             row.className = `roadmap-item${item.unlocked ? ' done' : ''}`;
             row.innerHTML = `
-                <div class="roadmap-marker"><i class="${item.icon}"></i></div>
+                <div class="roadmap-marker"><i class="${item.icon}"></i></div>8
                 <div class="roadmap-content">
                     <div class="section-title-row">
                         <strong>${item.name}</strong>
