@@ -6,7 +6,9 @@
         reminders: false,
         reminderTime: '09:00',
         soundEffects: true,
-        alarmSound: true
+        alarmSound: true,
+        alarmTone: 'chime',
+        reminderSnoozeMinutes: 5
     };
 
     function clone(value) {

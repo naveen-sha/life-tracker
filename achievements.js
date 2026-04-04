@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const unlockedCopyEl = document.getElementById('achievement-unlocked-copy');
     const nextCardsEl = document.getElementById('next-achievement-cards');
     const championHabitsEl = document.getElementById('champion-habits');
+    const achievementInsightsEl = document.getElementById('achievement-insights');
     const allAchievementsGridEl = document.getElementById('all-achievements-grid');
     const badgeProgressSummaryEl = document.getElementById('badge-progress-summary');
 
@@ -80,6 +81,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function renderInsights() {
+        const metrics = HabitTrackerData.getMetrics(habits);
+        const rank = HabitTrackerData.getRankProfile(habits);
+        achievementInsightsEl.innerHTML = '';
+
+        [
+            { label: 'Current Rank', value: rank.current.rank, sub: rank.current.title },
+            { label: '30-Day Consistency', value: `${metrics.completionRate30}%`, sub: 'completion rate' },
+            { label: 'Best Streak', value: `${metrics.longestStreak}d`, sub: 'strongest habit run' }
+        ].forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'summary-row-card';
+            card.innerHTML = `
+                <div>
+                    <strong>${item.label}</strong>
+                    <p>${item.sub}</p>
+                </div>
+                <span>${item.value}</span>
+            `;
+            achievementInsightsEl.appendChild(card);
+        });
+    }
+
     function renderAllBadges() {
         const achievements = HabitTrackerData.getAchievementStatus(habits);
         allAchievementsGridEl.innerHTML = '';
@@ -111,5 +135,6 @@ document.addEventListener('DOMContentLoaded', function() {
     renderOverview();
     renderNextWins();
     renderChampions();
+    renderInsights();
     renderAllBadges();
 });

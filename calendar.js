@@ -115,9 +115,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const o = ctx.createOscillator();
             const g = ctx.createGain();
             const now = ctx.currentTime;
-            o.type = kind === 'alarm' ? 'triangle' : 'sine';
-            o.frequency.setValueAtTime(kind === 'alarm' ? 480 : 620, now);
-            o.frequency.exponentialRampToValueAtTime(kind === 'alarm' ? 880 : 760, now + 0.22);
+            const tone = profileSettings.alarmTone || 'chime';
+            if (kind === 'alarm') {
+                if (tone === 'beep') {
+                    o.type = 'square';
+                    o.frequency.setValueAtTime(760, now);
+                    o.frequency.exponentialRampToValueAtTime(980, now + 0.24);
+                } else if (tone === 'pulse') {
+                    o.type = 'triangle';
+                    o.frequency.setValueAtTime(420, now);
+                    o.frequency.exponentialRampToValueAtTime(820, now + 0.48);
+                } else {
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(520, now);
+                    o.frequency.exponentialRampToValueAtTime(880, now + 0.42);
+                }
+            } else {
+                o.type = 'sine';
+                o.frequency.setValueAtTime(620, now);
+                o.frequency.exponentialRampToValueAtTime(760, now + 0.22);
+            }
             g.gain.setValueAtTime(0.0001, now);
             g.gain.exponentialRampToValueAtTime(0.15, now + 0.04);
             g.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
@@ -132,6 +149,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function checkReminderAlarm() {
         if (!profileSettings.reminders || !profileSettings.reminderTime) {
+            return;
+        }
+
+        const snoozeUntil = storage.getMeta('reminderSnoozeUntil');
+        if (snoozeUntil && new Date(snoozeUntil).getTime() > Date.now()) {
             return;
         }
 
@@ -151,7 +173,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (profileSettings.alarmSound !== false) {
             playCalendarSound('alarm');
         }
-        alert('Reminder: Update your tracker and calendar logs.');
+        const snoozeMinutes = Number(profileSettings.reminderSnoozeMinutes) || 5;
+        if (confirm(`Reminder: Update your tracker and calendar logs.\n\nPress OK to snooze ${snoozeMinutes} min, Cancel to dismiss.`)) {
+            const until = new Date(Date.now() + snoozeMinutes * 60 * 1000).toISOString();
+            storage.setMeta('reminderSnoozeUntil', until);
+        }
     }
 
     function toggleDarkMode() {

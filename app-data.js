@@ -188,9 +188,12 @@
     const ACHIEVEMENTS = [
         { id: 'first-habit', name: 'First Steps', description: 'Create your first habit.', icon: 'fas fa-seedling', target: 1, progress: habits => habits.length },
         { id: 'habit-collector', name: 'Habit Collector', description: 'Build a stack of 5 habits.', icon: 'fas fa-layer-group', target: 5, progress: habits => getMetrics(habits).totalHabits },
+        { id: 'habit-architect', name: 'Habit Architect', description: 'Build a stack of 10 habits.', icon: 'fas fa-drafting-compass', target: 10, progress: habits => getMetrics(habits).totalHabits },
         { id: 'week-streak', name: 'Week Warrior', description: 'Reach a 7-day streak on any habit.', icon: 'fas fa-fire', target: 7, progress: habits => getMetrics(habits).longestStreak },
         { id: 'month-streak', name: 'Month Master', description: 'Reach a 30-day streak on any habit.', icon: 'fas fa-crown', target: 30, progress: habits => getMetrics(habits).longestStreak },
+        { id: 'iron-streak', name: 'Iron Streak', description: 'Reach a 60-day streak on any habit.', icon: 'fas fa-shield-alt', target: 60, progress: habits => getMetrics(habits).longestStreak },
         { id: 'century-club', name: 'Century Club', description: 'Log 100 total completions.', icon: 'fas fa-trophy', target: 100, progress: habits => getMetrics(habits).totalCompletions },
+        { id: 'double-century', name: 'Double Century', description: 'Log 200 total completions.', icon: 'fas fa-award', target: 200, progress: habits => getMetrics(habits).totalCompletions },
         { id: 'consistency-star', name: 'Consistency Star', description: 'Hit a 70% completion rate over the last 30 days.', icon: 'fas fa-star', target: 70, progress: habits => getMetrics(habits).completionRate30 },
         {
             id: 'perfect-week',
@@ -210,6 +213,43 @@
             }
         },
         { id: 'category-explorer', name: 'Category Explorer', description: 'Track habits in 3 different categories.', icon: 'fas fa-compass', target: 3, progress: habits => getMetrics(habits).categoriesUsed },
+        {
+            id: 'gym-grinder',
+            name: 'Gym Grinder',
+            description: 'Log 40 gym completions.',
+            icon: 'fas fa-dumbbell',
+            target: 40,
+            progress: habits => normalizeHabits(habits)
+                .filter(habit => habit.category.toLowerCase() === 'gym')
+                .reduce((sum, habit) => sum + habit.history.length, 0)
+        },
+        {
+            id: 'learning-scholar',
+            name: 'Learning Scholar',
+            description: 'Log 40 learning completions.',
+            icon: 'fas fa-book-open',
+            target: 40,
+            progress: habits => normalizeHabits(habits)
+                .filter(habit => habit.category.toLowerCase() === 'learning')
+                .reduce((sum, habit) => sum + habit.history.length, 0)
+        },
+        {
+            id: 'dual-discipline',
+            name: 'Dual Discipline',
+            description: 'Reach 20 completions in both gym and learning.',
+            icon: 'fas fa-yin-yang',
+            target: 20,
+            progress: habits => {
+                const normalized = normalizeHabits(habits);
+                const gym = normalized
+                    .filter(habit => habit.category.toLowerCase() === 'gym')
+                    .reduce((sum, habit) => sum + habit.history.length, 0);
+                const learning = normalized
+                    .filter(habit => habit.category.toLowerCase() === 'learning')
+                    .reduce((sum, habit) => sum + habit.history.length, 0);
+                return Math.min(gym, learning);
+            }
+        },
         { id: 'active-month', name: 'Active Month', description: 'Show up on 20 days in the last 30 days.', icon: 'fas fa-calendar-check', target: 20, progress: habits => getMetrics(habits).activeDays30 },
         { id: 'perfect-ten', name: 'Perfect Ten', description: 'Earn 10 perfect days in the last 30 days.', icon: 'fas fa-gem', target: 10, progress: habits => getMetrics(habits).perfectDays30 }
     ];

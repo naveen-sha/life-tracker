@@ -81,6 +81,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const learningGoalAddBtnEl = document.getElementById('learning-goal-add-btn');
     const learningGoalListEl = document.getElementById('learning-goal-list');
     const learningGoalStatsEl = document.getElementById('learning-goal-stats');
+    const gymInsightCardsEl = document.getElementById('gym-insight-cards');
+    const learningInsightCardsEl = document.getElementById('learning-insight-cards');
+    const focusMinuteCardsEl = document.getElementById('focus-minute-cards');
 
     let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
     let darkMode = profile.darkMode;
@@ -99,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ...(profile.settings || {})
     };
     let lastReminderTriggerKey = storage.getMeta('lastReminderTriggerKey') || '';
+    let reminderPanelEl = null;
 
     function escapeHtml(value) {
         return String(value)
@@ -258,14 +262,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const g = ctx.createGain();
             const now = ctx.currentTime;
 
+            const tone = profileSettings.alarmTone || 'chime';
+
             if (kind === 'success') {
                 o.type = 'sine';
                 o.frequency.setValueAtTime(520, now);
                 o.frequency.exponentialRampToValueAtTime(760, now + 0.2);
             } else if (kind === 'alarm') {
-                o.type = 'triangle';
-                o.frequency.setValueAtTime(440, now);
-                o.frequency.exponentialRampToValueAtTime(900, now + 0.4);
+                if (tone === 'beep') {
+                    o.type = 'square';
+                    o.frequency.setValueAtTime(760, now);
+                    o.frequency.exponentialRampToValueAtTime(980, now + 0.24);
+                } else if (tone === 'pulse') {
+                    o.type = 'triangle';
+                    o.frequency.setValueAtTime(420, now);
+                    o.frequency.exponentialRampToValueAtTime(820, now + 0.48);
+                } else {
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(520, now);
+                    o.frequency.exponentialRampToValueAtTime(880, now + 0.42);
+                }
             } else {
                 o.type = 'square';
                 o.frequency.setValueAtTime(420, now);
@@ -329,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
             playUISound('alarm');
         }
 
-        showUndoToast('Reminder: Time to check your habits and goals.', function() {});
+        showReminderPanel();
 
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
@@ -347,6 +363,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        const snoozeUntil = storage.getMeta('reminderSnoozeUntil');
+        if (snoozeUntil && new Date(snoozeUntil).getTime() > Date.now()) {
+            return;
+        }
+
         const now = new Date();
         const hhmm = now.toTimeString().slice(0, 5);
         if (hhmm !== profileSettings.reminderTime) {
@@ -361,6 +382,55 @@ document.addEventListener('DOMContentLoaded', function() {
         lastReminderTriggerKey = triggerKey;
         storage.setMeta('lastReminderTriggerKey', triggerKey);
         triggerReminderAlarm();
+    }
+
+    function dismissReminderPanel() {
+        if (reminderPanelEl) {
+            reminderPanelEl.remove();
+            reminderPanelEl = null;
+        }
+    }
+
+    function snoozeReminder(minutes) {
+        const mins = Math.max(1, Number(minutes) || 5);
+        const until = new Date(Date.now() + mins * 60 * 1000).toISOString();
+        storage.setMeta('reminderSnoozeUntil', until);
+        dismissReminderPanel();
+    }
+
+    function showReminderPanel() {
+        dismissReminderPanel();
+        const defaultSnooze = Number(profileSettings.reminderSnoozeMinutes) || 5;
+        const longSnooze = defaultSnooze + 5;
+        reminderPanelEl = document.createElement('div');
+        reminderPanelEl.className = 'rank-up-banner visible';
+        reminderPanelEl.innerHTML = `
+            <strong>Reminder Alert</strong>
+            <span>Time to update your habits and goals.</span>
+            <div class="goal-actions" style="margin-top:8px;">
+                <button class="goal-action-btn" data-reminder-action="done">Done</button>
+                <button class="goal-action-btn" data-reminder-action="snooze-default">Snooze ${defaultSnooze}m</button>
+                <button class="goal-action-btn" data-reminder-action="snooze-long">Snooze ${longSnooze}m</button>
+            </div>
+        `;
+        document.body.appendChild(reminderPanelEl);
+
+        reminderPanelEl.addEventListener('click', function(event) {
+            const btn = event.target.closest('[data-reminder-action]');
+            if (!btn) {
+                return;
+            }
+            const action = btn.dataset.reminderAction;
+            if (action === 'done') {
+                dismissReminderPanel();
+                return;
+            }
+            if (action === 'snooze-long') {
+                snoozeReminder(longSnooze);
+                return;
+            }
+            snoozeReminder(defaultSnooze);
+        });
     }
 
     function reloadFromCurrentProfile() {
@@ -596,6 +666,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderFocusHabit();
         renderNextAchievements();
         renderCategoryHighlights();
+        renderDomainInsights();
         renderRankArena();
         renderDomainCommandCenter();
         renderPlannerArena();
@@ -831,9 +902,18 @@ document.addEventListener('DOMContentLoaded', function() {
             createdAt: new Date().toISOString()
         });
 
+        if (type === 'done') {
+            const firstActiveGoal = (goalState[normalizedDomain] || []).find(goal => goal.completed < goal.target);
+            if (firstActiveGoal) {
+                firstActiveGoal.completed = Math.min(firstActiveGoal.target, firstActiveGoal.completed + 1);
+                saveGoalState();
+            }
+        }
+
         savePlannerState();
         playUISound('success');
         renderPlannerArena();
+        renderGoalArena();
     }
 
     function togglePlannerEntry(domain, id) {
@@ -1438,6 +1518,64 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 categoryHighlightsEl.appendChild(card);
             });
+    }
+
+    function renderDomainInsights() {
+        if (!gymInsightCardsEl || !learningInsightCardsEl || !focusMinuteCardsEl) {
+            return;
+        }
+
+        function buildDomainMetrics(domain) {
+            const domainHabits = habits.filter(h => h.category.toLowerCase() === domain);
+            const domainPlans = (plannerState[domain] || []);
+            const donePlans = domainPlans.filter(item => item.completed || item.type === 'done');
+            const totalMinutes7 = donePlans
+                .filter(item => Date.now() - new Date(item.createdAt || 0).getTime() <= 7 * 24 * 60 * 60 * 1000)
+                .reduce((sum, item) => sum + (Number(item.duration) || 0), 0);
+            const completionRate = domainHabits.length ? Math.round((donePlans.length / Math.max(1, domainPlans.length)) * 100) : 0;
+            const goalCount = (goalState[domain] || []).length;
+            const goalDone = (goalState[domain] || []).filter(g => g.completed >= g.target).length;
+
+            return {
+                habits: domainHabits.length,
+                plans: domainPlans.length,
+                completionRate,
+                totalMinutes7,
+                goalCount,
+                goalDone
+            };
+        }
+
+        function paintCards(target, rows) {
+            target.innerHTML = '';
+            rows.forEach(row => {
+                const item = document.createElement('div');
+                item.className = 'summary-row-card';
+                item.innerHTML = `<div><strong>${row.label}</strong><p>${row.sub || ''}</p></div><span>${row.value}</span>`;
+                target.appendChild(item);
+            });
+        }
+
+        const gym = buildDomainMetrics('gym');
+        const learning = buildDomainMetrics('learning');
+
+        paintCards(gymInsightCardsEl, [
+            { label: 'Habits', value: gym.habits, sub: 'Gym habits tracked' },
+            { label: 'Plans', value: gym.plans, sub: 'Workout plans/logs' },
+            { label: 'Goals', value: `${gym.goalDone}/${gym.goalCount}`, sub: 'Completed goals' }
+        ]);
+
+        paintCards(learningInsightCardsEl, [
+            { label: 'Habits', value: learning.habits, sub: 'Learning habits tracked' },
+            { label: 'Plans', value: learning.plans, sub: 'Study plans/logs' },
+            { label: 'Goals', value: `${learning.goalDone}/${learning.goalCount}`, sub: 'Completed goals' }
+        ]);
+
+        paintCards(focusMinuteCardsEl, [
+            { label: 'Gym Minutes', value: gym.totalMinutes7, sub: 'Last 7 days' },
+            { label: 'Learning Minutes', value: learning.totalMinutes7, sub: 'Last 7 days' },
+            { label: 'Execution', value: `${Math.round((gym.completionRate + learning.completionRate) / 2)}%`, sub: 'Plan completion trend' }
+        ]);
     }
 
     function addHabit(name, category) {

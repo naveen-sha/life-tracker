@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const reminderTime = document.getElementById('reminder-time');
     const soundEffectsToggle = document.getElementById('sound-effects-toggle');
     const alarmSoundToggle = document.getElementById('alarm-sound-toggle');
+    const alarmToneSelect = document.getElementById('alarm-tone-select');
+    const reminderSnoozeMinutesSelect = document.getElementById('reminder-snooze-minutes');
     const testAlarmBtn = document.getElementById('test-alarm-btn');
     const activeProfileNameEl = document.getElementById('active-profile-name');
     const activeProfileMetaEl = document.getElementById('active-profile-meta');
@@ -405,6 +407,16 @@ document.addEventListener('DOMContentLoaded', function() {
         saveSettings();
     });
 
+    alarmToneSelect.addEventListener('change', function() {
+        settings.alarmTone = this.value;
+        saveSettings();
+    });
+
+    reminderSnoozeMinutesSelect.addEventListener('change', function() {
+        settings.reminderSnoozeMinutes = Number(this.value) || 5;
+        saveSettings();
+    });
+
     testAlarmBtn.addEventListener('click', function() {
         try {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -412,9 +424,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 const ctx = new AudioCtx();
                 const o = ctx.createOscillator();
                 const g = ctx.createGain();
-                o.type = 'sine';
-                o.frequency.setValueAtTime(540, ctx.currentTime);
-                o.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.45);
+                if (settings.alarmTone === 'beep') {
+                    o.type = 'square';
+                    o.frequency.setValueAtTime(720, ctx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(940, ctx.currentTime + 0.35);
+                } else if (settings.alarmTone === 'pulse') {
+                    o.type = 'triangle';
+                    o.frequency.setValueAtTime(440, ctx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(760, ctx.currentTime + 0.55);
+                } else {
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(540, ctx.currentTime);
+                    o.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.45);
+                }
                 g.gain.setValueAtTime(0.001, ctx.currentTime);
                 g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.05);
                 g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.62);
@@ -445,6 +467,8 @@ document.addEventListener('DOMContentLoaded', function() {
     reminderTime.value = settings.reminderTime;
     soundEffectsToggle.checked = settings.soundEffects !== false;
     alarmSoundToggle.checked = settings.alarmSound !== false;
+    alarmToneSelect.value = settings.alarmTone || 'chime';
+    reminderSnoozeMinutesSelect.value = String(settings.reminderSnoozeMinutes || 5);
     renderProfiles();
     renderCategories();
     renderCloudState();
