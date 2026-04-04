@@ -17,6 +17,52 @@ body.dark-mode {
     color: #e0e0e0;
 }
 
+.scene-3d-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.scene-orb {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: orbFloat 12s ease-in-out infinite;
+}
+
+.orb-one {
+    width: 240px;
+    height: 240px;
+    left: -40px;
+    top: 90px;
+    background: radial-gradient(circle at 30% 30%, #8ec5ff, #1976d2);
+}
+
+.orb-two {
+    width: 320px;
+    height: 320px;
+    right: -80px;
+    top: 220px;
+    background: radial-gradient(circle at 30% 30%, #ffd166, #f48c06);
+    animation-delay: 1.4s;
+}
+
+.orb-three {
+    width: 260px;
+    height: 260px;
+    left: 38%;
+    bottom: -80px;
+    background: radial-gradient(circle at 30% 30%, #77ffc6, #00b894);
+    animation-delay: 2.2s;
+}
+
+@keyframes orbFloat {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(0, -24px, 0) scale(1.05); }
+}
+
 @keyframes wave {
     0%, 100% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -1608,11 +1654,19 @@ body.ui-lock-scroll {
     padding: 25px;
     max-width: 1400px;
     margin: 0 auto;
+    position: relative;
+    z-index: 1;
 }
 
 .content {
     flex: 1;
     min-width: 0;
+}
+
+.tilt-card {
+    transform-style: preserve-3d;
+    transition: transform 0.18s ease, box-shadow 0.22s ease;
+    will-change: transform;
 }
 
 .page-hero,

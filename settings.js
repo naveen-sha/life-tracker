@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const googleLoginBtn = document.getElementById('google-login-btn');
     const cloudSyncBtn = document.getElementById('cloud-sync-btn');
     const cloudPullBtn = document.getElementById('cloud-pull-btn');
+    const restoreBackupBtn = document.getElementById('restore-backup-btn');
     const googleLogoutBtn = document.getElementById('google-logout-btn');
 
     let profile = storage.getCurrentProfile();
@@ -186,6 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
         googleLoginBtn.disabled = !cloudReady || Boolean(user);
         cloudSyncBtn.disabled = !cloudReady || !user;
         cloudPullBtn.disabled = !cloudReady || !user;
+        restoreBackupBtn.disabled = !cloud || typeof cloud.restoreLatestBackup !== 'function';
         googleLogoutBtn.disabled = !cloudReady || !user;
 
         if (!cloudReady) {
@@ -338,9 +340,26 @@ document.addEventListener('DOMContentLoaded', function() {
             setCloudStatus(`Cloud pull result: ${result.status}.`);
             if (result.status === 'pulled') {
                 location.reload();
+            } else if (result.status === 'protected-local') {
+                setCloudStatus('Pull skipped to protect richer local progress. Use Sync Now to push your local data.');
             }
         } catch (error) {
             setCloudStatus('Cloud pull failed. Please try again.');
+        }
+    });
+
+    restoreBackupBtn.addEventListener('click', function() {
+        if (!cloud || typeof cloud.restoreLatestBackup !== 'function') {
+            setCloudStatus('Backup restore is unavailable.');
+            return;
+        }
+
+        const result = cloud.restoreLatestBackup();
+        if (result.status === 'restored') {
+            setCloudStatus(`Backup restored (${result.reason || 'unknown source'}). Reloading...`);
+            location.reload();
+        } else {
+            setCloudStatus('No local backup snapshot found yet.');
         }
     });
 

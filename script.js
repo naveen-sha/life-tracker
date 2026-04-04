@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const storage = window.HabitTrackerStorage;
-    const profile = storage.getCurrentProfile();
+    const cloud = window.HabitTrackerCloud;
+    let profile = storage.getCurrentProfile();
     const habitInput = document.getElementById('habit-input');
     const categorySelect = document.getElementById('category-select');
     const sortSelect = document.getElementById('sort-select');
@@ -71,6 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let undoPayload = null;
     let undoTimer = null;
     let plannerState = storage.getMeta('domainPlanner') || { gym: [], learning: [] };
+    let cloudSyncTimer = null;
 
     function escapeHtml(value) {
         return String(value)
@@ -106,10 +108,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function saveHabits() {
         storage.saveHabits(habits);
+        scheduleCloudSync();
     }
 
     function saveCategories() {
         storage.saveCategories(categories);
+        scheduleCloudSync();
     }
 
     const RANK_ORDER = ['E', 'D', 'C', 'B', 'A', 'S'];
@@ -140,6 +144,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function savePlannerState() {
         storage.setMeta('domainPlanner', plannerState);
+        scheduleCloudSync();
+    }
+
+    function canCloudSync() {
+        return Boolean(
+            cloud &&
+            typeof cloud.isReady === 'function' &&
+            cloud.isReady() &&
+            typeof cloud.getCurrentUser === 'function' &&
+            cloud.getCurrentUser()
+        );
+    }
+
+    function scheduleCloudSync() {
+        if (!canCloudSync()) {
+            return;
+        }
+
+        clearTimeout(cloudSyncTimer);
+        cloudSyncTimer = setTimeout(function() {
+            cloud.sync().catch(function() {
+                // Keep silent on dashboard to avoid noisy alerts.
+            });
+        }, 900);
+    }
+
+    function reloadFromCurrentProfile() {
+        profile = storage.getCurrentProfile();
+        habits = HabitTrackerData.normalizeHabits(profile.habits || []);
+        darkMode = profile.darkMode;
+        categories = profile.categories || HabitTrackerData.DEFAULT_CATEGORIES;
+        plannerState = storage.getMeta('domainPlanner') || { gym: [], learning: [] };
+
+        ensureCoreCategories();
+        normalizePlannerState();
+        normalizeHabitsState();
+        updateCategorySelect();
+        renderSuggestionChips();
+        document.body.classList.toggle('dark-mode', darkMode);
+        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        refreshAll();
     }
 
     function ensureCoreCategories() {
@@ -179,6 +224,37 @@ document.addEventListener('DOMContentLoaded', function() {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
+        });
+    }
+
+    function shouldEnable3DInteraction() {
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const coarse = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+        return !reduced && !coarse;
+    }
+
+    function applyTilt(card, event) {
+        const rect = card.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const rotateY = ((x / rect.width) - 0.5) * 12;
+        const rotateX = ((0.5 - y / rect.height) * 10);
+        card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`;
+    }
+
+    function setup3DInteractions() {
+        const cards = document.querySelectorAll('.rank-arena-card, .domain-card, .planner-panel, .stat-card, .hero-dashboard-card');
+        cards.forEach(card => {
+            card.classList.add('tilt-card');
+            card.addEventListener('mousemove', function(event) {
+                if (!shouldEnable3DInteraction()) {
+                    return;
+                }
+                applyTilt(card, event);
+            });
+            card.addEventListener('mouseleave', function() {
+                card.style.transform = '';
+            });
         });
     }
 
@@ -1181,6 +1257,16 @@ document.addEventListener('DOMContentLoaded', function() {
         link.addEventListener('click', closeSidebar);
     });
 
+    window.addEventListener('life-tracker-store-replaced', function() {
+        reloadFromCurrentProfile();
+    });
+
+    window.addEventListener('life-tracker-auth-changed', function() {
+        if (canCloudSync()) {
+            cloud.sync().catch(function() {});
+        }
+    });
+
     const today = HabitTrackerData.getTodayString();
     const lastReset = storage.getMeta('lastReset');
     if (lastReset !== today) {
@@ -1204,5 +1290,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateLiveDateTime, 1000);
     updateDailyTip();
     renderSuggestionChips();
+    setup3DInteractions();
     refreshAll();
+
+    if (canCloudSync()) {
+        cloud.sync().catch(function() {});
+    }
 });
