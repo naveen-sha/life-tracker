@@ -1047,20 +1047,23 @@ body.dark-mode .profile-item.active {
     margin-bottom: 16px;
 }
 
-#profile-name-input {
+#profile-name-input,
+#rename-profile-input {
     flex: 1;
     padding: 10px 12px;
     border: 1px solid #ddd;
     border-radius: 8px;
 }
 
-body.dark-mode #profile-name-input {
+body.dark-mode #profile-name-input,
+body.dark-mode #rename-profile-input {
     background-color: #3a3a5e;
     border-color: #4dabf7;
     color: #e0e0e0;
 }
 
-#create-profile-btn {
+#create-profile-btn,
+#rename-profile-btn {
     padding: 10px 16px;
     background-color: #007bff;
     color: white;
@@ -1070,8 +1073,14 @@ body.dark-mode #profile-name-input {
     transition: background-color 0.3s ease;
 }
 
-#create-profile-btn:hover {
+#create-profile-btn:hover,
+#rename-profile-btn:hover {
     background-color: #0069d9;
+}
+
+.cloud-action-row {
+    justify-content: flex-start;
+    margin-top: 14px;
 }
 
 .setting-item label {

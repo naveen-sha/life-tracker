@@ -58,7 +58,15 @@
     }
 
     function writeStore(store) {
+        if (store && typeof store === 'object') {
+            store.updatedAt = new Date().toISOString();
+        }
+
         localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+
+        if (window.HabitTrackerCloud && typeof window.HabitTrackerCloud.scheduleAutoSync === 'function') {
+            window.HabitTrackerCloud.scheduleAutoSync();
+        }
     }
 
     function getLegacyProfile() {
@@ -93,7 +101,8 @@
             ? {
                 version: 1,
                 currentUserId: rawStore.currentUserId || '',
-                profiles: rawStore.profiles && typeof rawStore.profiles === 'object' ? rawStore.profiles : {}
+                profiles: rawStore.profiles && typeof rawStore.profiles === 'object' ? rawStore.profiles : {},
+                updatedAt: rawStore.updatedAt || new Date().toISOString()
             }
             : null;
 
@@ -103,6 +112,7 @@
             store = {
                 version: 1,
                 currentUserId: initialProfile.id,
+                updatedAt: new Date().toISOString(),
                 profiles: {
                     [initialProfile.id]: initialProfile
                 }
@@ -185,6 +195,18 @@
         store.currentUserId = profile.id;
         writeStore(store);
         return clone(profile);
+    }
+
+    function renameCurrentProfile(name) {
+        const trimmed = (name || '').trim();
+        if (!trimmed) {
+            throw new Error('Profile name is required.');
+        }
+
+        return updateCurrentProfile(profile => {
+            profile.name = trimmed;
+            return profile;
+        });
     }
 
     function switchProfile(id) {
@@ -308,6 +330,7 @@
         getCurrentProfile,
         listProfiles,
         createProfile: createProfileWithName,
+        renameCurrentProfile,
         switchProfile,
         deleteProfile,
         saveHabits,

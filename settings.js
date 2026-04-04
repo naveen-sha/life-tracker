@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const storage = window.HabitTrackerStorage;
+    const cloud = window.HabitTrackerCloud;
+
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const themeSelect = document.getElementById('theme-select');
     const categoriesListEl = document.getElementById('categories-list');
@@ -15,7 +17,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const activeProfileCountEl = document.getElementById('active-profile-count');
     const profileNameInput = document.getElementById('profile-name-input');
     const createProfileBtn = document.getElementById('create-profile-btn');
+    const renameProfileInput = document.getElementById('rename-profile-input');
+    const renameProfileBtn = document.getElementById('rename-profile-btn');
     const profilesListEl = document.getElementById('profiles-list');
+
+    const cloudUserStatusEl = document.getElementById('cloud-user-status');
+    const cloudSyncStatusEl = document.getElementById('cloud-sync-status');
+    const cloudReadyChipEl = document.getElementById('cloud-ready-chip');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const cloudSyncBtn = document.getElementById('cloud-sync-btn');
+    const cloudPullBtn = document.getElementById('cloud-pull-btn');
+    const googleLogoutBtn = document.getElementById('google-logout-btn');
 
     let profile = storage.getCurrentProfile();
     let habits = profile.habits || [];
@@ -65,9 +77,12 @@ document.addEventListener('DOMContentLoaded', function() {
         activeProfileNameEl.textContent = profile.name;
         activeProfileMetaEl.textContent = `Last login: ${formatLoginDate(profile.lastLoginAt)}. Progress stays saved for each profile on this device.`;
         activeProfileCountEl.textContent = `${habits.length} habits`;
+        renameProfileInput.value = profile.name;
+
+        const profiles = storage.listProfiles();
 
         profilesListEl.innerHTML = '';
-        storage.listProfiles().forEach(item => {
+        profiles.forEach(item => {
             const card = document.createElement('div');
             card.className = `profile-item${item.active ? ' active' : ''}`;
             card.innerHTML = `
@@ -80,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn-secondary profile-switch-btn" data-profile-id="${item.id}" ${item.active ? 'disabled' : ''}>
                         ${item.active ? 'Current' : 'Login'}
                     </button>
-                    <button class="btn-danger profile-delete-btn" data-profile-id="${item.id}" ${storage.listProfiles().length === 1 ? 'disabled' : ''}>
+                    <button class="btn-danger profile-delete-btn" data-profile-id="${item.id}" ${profiles.length === 1 ? 'disabled' : ''}>
                         Delete
                     </button>
                 </div>
@@ -130,9 +145,9 @@ document.addEventListener('DOMContentLoaded', function() {
         input.onchange = function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function(evt) {
                 try {
-                    const data = JSON.parse(e.target.result);
+                    const data = JSON.parse(evt.target.result);
                     if (confirm(`This will replace the data for ${profile.name}. Continue?`)) {
                         storage.importIntoCurrentProfile(data);
                         location.reload();
@@ -153,6 +168,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function setCloudStatus(text) {
+        cloudSyncStatusEl.textContent = text;
+    }
+
+    function ensureCloudAvailable() {
+        return cloud && typeof cloud.isReady === 'function' && cloud.isReady();
+    }
+
+    function renderCloudState() {
+        const cloudReady = ensureCloudAvailable();
+        const user = cloudReady ? cloud.getCurrentUser() : null;
+
+        cloudReadyChipEl.textContent = cloudReady ? 'Cloud ready' : 'Cloud unavailable';
+        cloudUserStatusEl.textContent = user ? (user.email || 'Connected') : 'Not connected';
+
+        googleLoginBtn.disabled = !cloudReady || Boolean(user);
+        cloudSyncBtn.disabled = !cloudReady || !user;
+        cloudPullBtn.disabled = !cloudReady || !user;
+        googleLogoutBtn.disabled = !cloudReady || !user;
+
+        if (!cloudReady) {
+            setCloudStatus('Set your Firebase config in firebase-config.js to enable Gmail sync.');
+            return;
+        }
+
+        if (!user) {
+            setCloudStatus('Sign in with Google to sync this profile across devices.');
+            return;
+        }
+
+        setCloudStatus('Connected. Your data can sync across devices with this Google account.');
+    }
+
     themeSelect.addEventListener('change', function() {
         settings.theme = this.value;
         if (settings.theme === 'dark') {
@@ -162,11 +210,11 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.classList.remove('dark-mode');
             darkMode = false;
         } else {
-            // Auto theme based on system preference
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             document.body.classList.toggle('dark-mode', prefersDark);
             darkMode = prefersDark;
         }
+
         storage.setDarkMode(darkMode);
         darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         saveSettings();
@@ -196,9 +244,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    renameProfileBtn.addEventListener('click', function() {
+        const name = renameProfileInput.value.trim();
+        if (!name) {
+            return;
+        }
+
+        try {
+            storage.renameCurrentProfile(name);
+            renderProfiles();
+            setCloudStatus('Current profile renamed.');
+        } catch (error) {
+            alert(error.message);
+        }
+    });
+
     profileNameInput.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
             createProfileBtn.click();
+        }
+    });
+
+    renameProfileInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            renameProfileBtn.click();
         }
     });
 
@@ -222,6 +291,74 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    googleLoginBtn.addEventListener('click', async function() {
+        if (!ensureCloudAvailable()) {
+            setCloudStatus('Cloud sync is not configured yet.');
+            return;
+        }
+
+        try {
+            setCloudStatus('Connecting to Google account...');
+            await cloud.signInWithGoogle();
+            setCloudStatus('Signed in and sync completed.');
+            renderCloudState();
+            location.reload();
+        } catch (error) {
+            setCloudStatus('Google login failed. Check popup permissions and Firebase config.');
+        }
+    });
+
+    cloudSyncBtn.addEventListener('click', async function() {
+        if (!ensureCloudAvailable()) {
+            setCloudStatus('Cloud sync is not configured yet.');
+            return;
+        }
+
+        try {
+            setCloudStatus('Syncing local data to cloud...');
+            const result = await cloud.sync();
+            setCloudStatus(`Sync complete: ${result.status}.`);
+            if (String(result.status).startsWith('pulled')) {
+                location.reload();
+            }
+        } catch (error) {
+            setCloudStatus('Sync failed. Please try again.');
+        }
+    });
+
+    cloudPullBtn.addEventListener('click', async function() {
+        if (!ensureCloudAvailable()) {
+            setCloudStatus('Cloud sync is not configured yet.');
+            return;
+        }
+
+        try {
+            setCloudStatus('Pulling latest cloud data...');
+            const result = await cloud.pullCloudToLocal();
+            setCloudStatus(`Cloud pull result: ${result.status}.`);
+            if (result.status === 'pulled') {
+                location.reload();
+            }
+        } catch (error) {
+            setCloudStatus('Cloud pull failed. Please try again.');
+        }
+    });
+
+    googleLogoutBtn.addEventListener('click', async function() {
+        if (!ensureCloudAvailable()) {
+            setCloudStatus('Cloud sync is not configured yet.');
+            return;
+        }
+
+        try {
+            await cloud.signOut();
+            setCloudStatus('Logged out from Google account.');
+            renderCloudState();
+        } catch (error) {
+            setCloudStatus('Logout failed. Please try again.');
+        }
+    });
+
     exportDataBtn.addEventListener('click', exportData);
     importDataBtn.addEventListener('click', importData);
     clearDataBtn.addEventListener('click', clearData);
@@ -238,7 +375,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     darkModeToggle.addEventListener('click', toggleDarkMode);
 
-    // Initialize
+    window.addEventListener('life-tracker-auth-changed', renderCloudState);
+    window.addEventListener('life-tracker-store-replaced', function() {
+        refreshProfileState();
+        renderProfiles();
+        renderCategories();
+    });
+
     document.body.classList.toggle('dark-mode', darkMode);
     darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     themeSelect.value = settings.theme;
@@ -246,4 +389,5 @@ document.addEventListener('DOMContentLoaded', function() {
     reminderTime.value = settings.reminderTime;
     renderProfiles();
     renderCategories();
+    renderCloudState();
 });
