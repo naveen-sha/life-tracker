@@ -73,6 +73,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let undoTimer = null;
     let plannerState = storage.getMeta('domainPlanner') || { gym: [], learning: [] };
     let cloudSyncTimer = null;
+    let refreshRafId = 0;
+    let searchDebounceTimer = null;
 
     function escapeHtml(value) {
         return String(value)
@@ -170,6 +172,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 900);
     }
 
+    function scheduleRefresh() {
+        if (refreshRafId) {
+            return;
+        }
+
+        refreshRafId = window.requestAnimationFrame(function() {
+            refreshRafId = 0;
+            refreshAll();
+        });
+    }
+
     function reloadFromCurrentProfile() {
         profile = storage.getCurrentProfile();
         habits = HabitTrackerData.normalizeHabits(profile.habits || []);
@@ -184,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderSuggestionChips();
         document.body.classList.toggle('dark-mode', darkMode);
         darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-        refreshAll();
+        scheduleRefresh();
     }
 
     function ensureCoreCategories() {
@@ -230,13 +243,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function shouldEnable3DInteraction() {
         const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const coarse = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-        return !reduced && !coarse;
+        const smallScreen = window.innerWidth < 992;
+        return !reduced && !coarse && !smallScreen;
     }
 
-    function applyTilt(card, event) {
+    function applyTilt(card, point) {
         const rect = card.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        const x = point.clientX - rect.left;
+        const y = point.clientY - rect.top;
         const rotateY = ((x / rect.width) - 0.5) * 12;
         const rotateX = ((0.5 - y / rect.height) * 10);
         card.style.transform = `perspective(1000px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`;
@@ -245,14 +259,32 @@ document.addEventListener('DOMContentLoaded', function() {
     function setup3DInteractions() {
         const cards = document.querySelectorAll('.rank-arena-card, .domain-card, .planner-panel, .stat-card, .hero-dashboard-card');
         cards.forEach(card => {
+            let rafId = 0;
+            let point = null;
             card.classList.add('tilt-card');
             card.addEventListener('mousemove', function(event) {
                 if (!shouldEnable3DInteraction()) {
                     return;
                 }
-                applyTilt(card, event);
+
+                point = {
+                    clientX: event.clientX,
+                    clientY: event.clientY
+                };
+
+                if (rafId) {
+                    return;
+                }
+
+                rafId = window.requestAnimationFrame(function() {
+                    rafId = 0;
+                    if (point) {
+                        applyTilt(card, point);
+                    }
+                });
             });
             card.addEventListener('mouseleave', function() {
+                point = null;
                 card.style.transform = '';
             });
         });
@@ -894,20 +926,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderChart() {
-        const ctx = document.getElementById('progressChart').getContext('2d');
+        const chartEl = document.getElementById('progressChart');
+        if (!chartEl) {
+            return;
+        }
+
+        const ctx = chartEl.getContext('2d');
         const trend = HabitTrackerData.getMonthlyTrend(habits);
+        const labels = trend.map(item => item.label);
+        const values = trend.map(item => item.completions);
+        const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (progressChart) {
-            progressChart.destroy();
+            progressChart.data.labels = labels;
+            progressChart.data.datasets[0].data = values;
+            progressChart.update('none');
+            return;
         }
 
         progressChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: trend.map(item => item.label),
+                labels,
                 datasets: [{
                     label: 'Daily Completions',
-                    data: trend.map(item => item.completions),
+                    data: values,
                     backgroundColor: 'rgba(0, 123, 255, 0.18)',
                     borderColor: 'rgba(0, 123, 255, 1)',
                     borderWidth: 3,
@@ -917,6 +960,9 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             options: {
                 responsive: true,
+                animation: {
+                    duration: reducedMotion ? 0 : 260
+                },
                 plugins: {
                     legend: {
                         display: false
@@ -1175,8 +1221,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     darkModeToggle.addEventListener('click', toggleDarkMode);
-    sortSelect.addEventListener('change', refreshAll);
-    searchInput.addEventListener('input', refreshAll);
+    sortSelect.addEventListener('change', scheduleRefresh);
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(function() {
+            scheduleRefresh();
+        }, 110);
+    });
 
     if (quickFiltersEl) {
         quickFiltersEl.addEventListener('click', function(event) {
@@ -1186,7 +1237,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             setFilter(filterBtn.dataset.filter || 'all');
-            refreshAll();
+            scheduleRefresh();
         });
     }
 

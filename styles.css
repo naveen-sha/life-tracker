@@ -1669,6 +1669,37 @@ body.ui-lock-scroll {
     will-change: transform;
 }
 
+.habit-item,
+.achievement,
+.domain-card,
+.planner-panel,
+.stat-card,
+.hero-dashboard-card,
+.category-section {
+    content-visibility: auto;
+    contain-intrinsic-size: 280px;
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 991px) {
+    .tilt-card {
+        transform: none !important;
+        transition: box-shadow 0.2s ease;
+        will-change: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scene-orb,
+    .rank-character-model,
+    .rank-arena-card.rank-up-active {
+        animation: none !important;
+    }
+
+    .tilt-card {
+        transition: none !important;
+    }
+}
+
 .page-hero,
 .hero-dashboard-card {
     display: grid;
