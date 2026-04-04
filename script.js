@@ -22,6 +22,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const suggestionChipsEl = document.getElementById('suggestion-chips');
     const quickFiltersEl = document.getElementById('quick-filters');
     const habitCountStatusEl = document.getElementById('habit-count-status');
+    const rankArenaEl = document.getElementById('rank-arena');
+    const rankCharacterModelEl = document.getElementById('rank-character-model');
+    const rankCharacterEmblemEl = document.getElementById('rank-character-emblem');
+    const rankCharacterNameEl = document.getElementById('rank-character-name');
+    const rankCharacterTitleEl = document.getElementById('rank-character-title');
+    const rankBadgeEl = document.getElementById('rank-badge');
+    const rankScoreValueEl = document.getElementById('rank-score-value');
+    const rankTierProgressEl = document.getElementById('rank-tier-progress');
+    const rankNextHintEl = document.getElementById('rank-next-hint');
+    const rankStreakValueEl = document.getElementById('rank-streak-value');
+    const rankConsistencyValueEl = document.getElementById('rank-consistency-value');
+    const rankVolumeValueEl = document.getElementById('rank-volume-value');
     const gymDomainRateEl = document.getElementById('gym-domain-rate');
     const gymDomainCopyEl = document.getElementById('gym-domain-copy');
     const gymDomainQuickAddEl = document.getElementById('gym-domain-quick-add');
@@ -40,6 +52,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const categoryHighlightsEl = document.getElementById('category-highlights');
     const liveDateTimeEl = document.getElementById('live-datetime');
     const liveDateCopyEl = document.getElementById('live-date-copy');
+    const gymPlanInputEl = document.getElementById('gym-plan-input');
+    const gymPlanTypeEl = document.getElementById('gym-plan-type');
+    const gymPlanAddBtnEl = document.getElementById('gym-plan-add-btn');
+    const gymPlanListEl = document.getElementById('gym-plan-list');
+    const gymPlanStatsEl = document.getElementById('gym-plan-stats');
+    const learningPlanInputEl = document.getElementById('learning-plan-input');
+    const learningPlanTypeEl = document.getElementById('learning-plan-type');
+    const learningPlanAddBtnEl = document.getElementById('learning-plan-add-btn');
+    const learningPlanListEl = document.getElementById('learning-plan-list');
+    const learningPlanStatsEl = document.getElementById('learning-plan-stats');
 
     let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
     let darkMode = profile.darkMode;
@@ -48,6 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentFilter = 'all';
     let undoPayload = null;
     let undoTimer = null;
+    let plannerState = storage.getMeta('domainPlanner') || { gym: [], learning: [] };
 
     function escapeHtml(value) {
         return String(value)
@@ -87,6 +110,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function saveCategories() {
         storage.saveCategories(categories);
+    }
+
+    const RANK_ORDER = ['E', 'D', 'C', 'B', 'A', 'S'];
+
+    function getRankValue(rank) {
+        return RANK_ORDER.indexOf(rank);
+    }
+
+    function normalizePlannerState() {
+        const safe = plannerState && typeof plannerState === 'object' ? plannerState : {};
+
+        ['gym', 'learning'].forEach(domain => {
+            if (!Array.isArray(safe[domain])) {
+                safe[domain] = [];
+            }
+
+            safe[domain] = safe[domain].map(item => ({
+                id: item.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                text: String(item.text || '').trim(),
+                type: item.type === 'done' ? 'done' : 'plan',
+                completed: Boolean(item.completed),
+                createdAt: item.createdAt || new Date().toISOString()
+            })).filter(item => item.text);
+        });
+
+        plannerState = safe;
+    }
+
+    function savePlannerState() {
+        storage.setMeta('domainPlanner', plannerState);
     }
 
     function ensureCoreCategories() {
@@ -249,7 +302,130 @@ document.addEventListener('DOMContentLoaded', function() {
         renderFocusHabit();
         renderNextAchievements();
         renderCategoryHighlights();
+        renderRankArena();
         renderDomainCommandCenter();
+        renderPlannerArena();
+    }
+
+    function renderRankArena() {
+        if (!rankArenaEl) {
+            return;
+        }
+
+        const rank = HabitTrackerData.getRankProfile(habits);
+        const current = rank.current;
+        const next = rank.next;
+
+        rankArenaEl.setAttribute('data-rank', current.rank.toLowerCase());
+        if (rankCharacterModelEl) {
+            rankCharacterModelEl.setAttribute('data-rank', current.rank.toLowerCase());
+        }
+        rankCharacterEmblemEl.textContent = current.rank;
+        rankCharacterNameEl.textContent = current.character;
+        rankCharacterTitleEl.textContent = current.title;
+        rankBadgeEl.innerHTML = `<i class="${current.icon}"></i> Rank ${current.rank}`;
+        rankScoreValueEl.textContent = `${rank.score}/100 Power`;
+        rankTierProgressEl.style.width = `${rank.progressWithinTier}%`;
+        rankStreakValueEl.textContent = `${rank.metrics.longestStreak}d`;
+        rankConsistencyValueEl.textContent = `${rank.metrics.completionRate30}%`;
+        rankVolumeValueEl.textContent = `${rank.metrics.totalCompletions}`;
+
+        if (next) {
+            rankNextHintEl.textContent = `${rank.pointsToNext} more power points to reach Rank ${next.rank}.`;
+        } else {
+            rankNextHintEl.textContent = 'You are at the absolute top rank. Keep dominating.';
+        }
+
+        handleRankUpEffects(current.rank, current);
+    }
+
+    function playRankUpSound() {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+            return;
+        }
+
+        try {
+            const audioCtx = new AudioCtx();
+            const oscillator = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(392, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(784, audioCtx.currentTime + 0.18);
+            oscillator.frequency.exponentialRampToValueAtTime(1175, audioCtx.currentTime + 0.34);
+
+            gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.16, audioCtx.currentTime + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.42);
+
+            oscillator.connect(gain);
+            gain.connect(audioCtx.destination);
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.45);
+        } catch (error) {
+            // Silent fallback if autoplay/audio context is blocked.
+        }
+    }
+
+    function showRankUpBanner(rankInfo) {
+        const previous = document.querySelector('.rank-up-banner');
+        if (previous) {
+            previous.remove();
+        }
+
+        const banner = document.createElement('div');
+        banner.className = 'rank-up-banner';
+        banner.innerHTML = `
+            <strong>Rank Up Unlocked</strong>
+            <span>You reached Rank ${rankInfo.rank} · ${escapeHtml(rankInfo.title)}</span>
+        `;
+        document.body.appendChild(banner);
+
+        setTimeout(function() {
+            banner.classList.add('visible');
+        }, 40);
+
+        setTimeout(function() {
+            banner.classList.remove('visible');
+            setTimeout(function() {
+                banner.remove();
+            }, 300);
+        }, 2800);
+    }
+
+    function handleRankUpEffects(currentRank, rankInfo) {
+        const savedRank = storage.getMeta('lastKnownRank');
+
+        if (!savedRank) {
+            storage.setMeta('lastKnownRank', currentRank);
+            return;
+        }
+
+        const currentValue = getRankValue(currentRank);
+        const savedValue = getRankValue(savedRank);
+
+        if (currentValue > savedValue) {
+            rankArenaEl.classList.add('rank-up-active');
+            setTimeout(function() {
+                rankArenaEl.classList.remove('rank-up-active');
+            }, 1400);
+
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 160, spread: 95, origin: { y: 0.52 } });
+                confetti({ particleCount: 80, spread: 65, angle: 45, origin: { x: 0, y: 0.6 } });
+                confetti({ particleCount: 80, spread: 65, angle: 135, origin: { x: 1, y: 0.6 } });
+            }
+
+            playRankUpSound();
+            showRankUpBanner(rankInfo);
+            storage.setMeta('lastKnownRank', currentRank);
+            return;
+        }
+
+        if (currentValue !== savedValue) {
+            storage.setMeta('lastKnownRank', currentRank);
+        }
     }
 
     function getCategoryWeeklyRate(categoryName) {
@@ -336,6 +512,95 @@ document.addEventListener('DOMContentLoaded', function() {
             learningDomainListEl,
             ['Read 20 pages', 'Practice coding', 'Flashcards', 'Revision notes']
         );
+    }
+
+    function addPlannerEntry(domain, text, type) {
+        const normalizedDomain = domain === 'learning' ? 'learning' : 'gym';
+        const trimmedText = text.trim();
+        if (!trimmedText) {
+            return;
+        }
+
+        plannerState[normalizedDomain].unshift({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            text: trimmedText,
+            type: type === 'done' ? 'done' : 'plan',
+            completed: type === 'done',
+            createdAt: new Date().toISOString()
+        });
+
+        savePlannerState();
+        renderPlannerArena();
+    }
+
+    function togglePlannerEntry(domain, id) {
+        const list = plannerState[domain];
+        const item = list.find(entry => entry.id === id);
+        if (!item) {
+            return;
+        }
+
+        item.completed = !item.completed;
+        if (item.completed) {
+            item.type = 'done';
+        }
+
+        savePlannerState();
+        renderPlannerArena();
+    }
+
+    function removePlannerEntry(domain, id) {
+        plannerState[domain] = plannerState[domain].filter(item => item.id !== id);
+        savePlannerState();
+        renderPlannerArena();
+    }
+
+    function formatPlannerDate(iso) {
+        try {
+            return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } catch (error) {
+            return '';
+        }
+    }
+
+    function renderPlannerDomain(domain, listEl, statsEl) {
+        if (!listEl || !statsEl) {
+            return;
+        }
+
+        const entries = plannerState[domain];
+        const doneCount = entries.filter(item => item.completed || item.type === 'done').length;
+        statsEl.textContent = `${doneCount} done / ${entries.length} total`;
+        listEl.innerHTML = '';
+
+        if (!entries.length) {
+            listEl.innerHTML = '<div class="mini-message-card">No entries yet. Add your first log or plan.</div>';
+            return;
+        }
+
+        entries.slice(0, 10).forEach(item => {
+            const row = document.createElement('div');
+            row.className = `planner-item${item.completed ? ' completed' : ''}`;
+            row.innerHTML = `
+                <label class="planner-check">
+                    <input type="checkbox" ${item.completed ? 'checked' : ''} data-domain="${domain}" data-id="${item.id}">
+                    <span></span>
+                </label>
+                <div class="planner-item-copy">
+                    <strong>${escapeHtml(item.text)}</strong>
+                    <small>${item.type === 'done' ? 'Completed' : 'Planned'} · ${formatPlannerDate(item.createdAt)}</small>
+                </div>
+                <button class="planner-delete-btn" data-domain="${domain}" data-id="${item.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            `;
+            listEl.appendChild(row);
+        });
+    }
+
+    function renderPlannerArena() {
+        renderPlannerDomain('gym', gymPlanListEl, gymPlanStatsEl);
+        renderPlannerDomain('learning', learningPlanListEl, learningPlanStatsEl);
     }
 
     function showUndoToast(message, onUndo) {
@@ -849,6 +1114,59 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    if (gymPlanAddBtnEl) {
+        gymPlanAddBtnEl.addEventListener('click', function() {
+            addPlannerEntry('gym', gymPlanInputEl.value, gymPlanTypeEl.value);
+            gymPlanInputEl.value = '';
+            gymPlanInputEl.focus();
+        });
+    }
+
+    if (learningPlanAddBtnEl) {
+        learningPlanAddBtnEl.addEventListener('click', function() {
+            addPlannerEntry('learning', learningPlanInputEl.value, learningPlanTypeEl.value);
+            learningPlanInputEl.value = '';
+            learningPlanInputEl.focus();
+        });
+    }
+
+    if (gymPlanInputEl) {
+        gymPlanInputEl.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                gymPlanAddBtnEl.click();
+            }
+        });
+    }
+
+    if (learningPlanInputEl) {
+        learningPlanInputEl.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                learningPlanAddBtnEl.click();
+            }
+        });
+    }
+
+    function handlePlannerListInteraction(event) {
+        const checkbox = event.target.closest('input[type="checkbox"][data-domain][data-id]');
+        if (checkbox) {
+            togglePlannerEntry(checkbox.dataset.domain, checkbox.dataset.id);
+            return;
+        }
+
+        const deleteBtn = event.target.closest('.planner-delete-btn[data-domain][data-id]');
+        if (deleteBtn) {
+            removePlannerEntry(deleteBtn.dataset.domain, deleteBtn.dataset.id);
+        }
+    }
+
+    if (gymPlanListEl) {
+        gymPlanListEl.addEventListener('click', handlePlannerListInteraction);
+    }
+
+    if (learningPlanListEl) {
+        learningPlanListEl.addEventListener('click', handlePlannerListInteraction);
+    }
+
     sidebarToggle.addEventListener('click', toggleSidebar);
 
     if (sidebarClose) {
@@ -873,6 +1191,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     ensureCoreCategories();
+    normalizePlannerState();
+    savePlannerState();
     normalizeHabitsState();
     saveHabits();
     saveCategories();

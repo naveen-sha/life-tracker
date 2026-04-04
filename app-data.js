@@ -17,6 +17,18 @@
         'Energy changes every day. Build systems that still work on low-energy days.',
         'Celebrate consistency, not just big milestones.'
     ];
+    const RANK_TIERS = [
+        { rank: 'S', minScore: 90, title: 'Sovereign Apex', character: 'Astra Prime', icon: 'fas fa-crown' },
+        { rank: 'A', minScore: 78, title: 'Elite Vanguard', character: 'Nova Blade', icon: 'fas fa-shield-alt' },
+        { rank: 'B', minScore: 64, title: 'Momentum Raider', character: 'Volt Runner', icon: 'fas fa-bolt' },
+        { rank: 'C', minScore: 48, title: 'Steady Builder', character: 'Terra Forge', icon: 'fas fa-hammer' },
+        { rank: 'D', minScore: 32, title: 'Rookie Climber', character: 'Echo Scout', icon: 'fas fa-mountain' },
+        { rank: 'E', minScore: 0, title: 'Origin Spark', character: 'Luna Start', icon: 'fas fa-seedling' }
+    ];
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
 
     function normalizeHabits(habits) {
         return (Array.isArray(habits) ? habits : []).map(habit => ({
@@ -125,6 +137,51 @@
             bestHabit,
             weeklyCompletions,
             weeklyCompletionRate
+        };
+    }
+
+    function calculateProgressScore(metrics) {
+        if (!metrics.totalHabits) {
+            return 0;
+        }
+
+        const consistency = metrics.completionRate30;
+        const streakPower = (Math.min(metrics.longestStreak, 60) / 60) * 100;
+        const completionVolume = (Math.min(metrics.totalCompletions, 500) / 500) * 100;
+        const weeklyPower = metrics.weeklyCompletionRate;
+        const activityPresence = (Math.min(metrics.activeDays30, 30) / 30) * 100;
+
+        return Math.round(
+            consistency * 0.34 +
+            streakPower * 0.24 +
+            completionVolume * 0.2 +
+            weeklyPower * 0.16 +
+            activityPresence * 0.06
+        );
+    }
+
+    function getRankProfile(habitsInput) {
+        const metrics = getMetrics(habitsInput);
+        const score = clamp(calculateProgressScore(metrics), 0, 100);
+        const currentIndex = RANK_TIERS.findIndex(tier => score >= tier.minScore);
+        const safeIndex = currentIndex === -1 ? RANK_TIERS.length - 1 : currentIndex;
+        const current = RANK_TIERS[safeIndex];
+        const next = safeIndex > 0 ? RANK_TIERS[safeIndex - 1] : null;
+
+        const currentMin = current.minScore;
+        const nextMin = next ? next.minScore : 100;
+        const tierSpan = Math.max(1, nextMin - currentMin);
+        const progressWithinTier = next
+            ? clamp(Math.round(((score - currentMin) / tierSpan) * 100), 0, 100)
+            : 100;
+
+        return {
+            score,
+            current,
+            next,
+            progressWithinTier,
+            pointsToNext: next ? Math.max(0, next.minScore - score) : 0,
+            metrics
         };
     }
 
@@ -247,6 +304,7 @@
         DEFAULT_CATEGORIES,
         QUOTES,
         DAILY_TIPS,
+        RANK_TIERS,
         ACHIEVEMENTS,
         normalizeHabits,
         getTodayString,
@@ -262,6 +320,7 @@
         getWeeklyHabitSummary,
         getMonthlyTrend,
         getSuggestions,
-        getHabitLevel
+        getHabitLevel,
+        getRankProfile
     };
 })();

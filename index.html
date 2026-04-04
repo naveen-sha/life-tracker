@@ -123,6 +123,42 @@
                 <small id="hero-progress-copy">Your next milestone will appear here.</small>
             </div>
         </section>
+        <section id="rank-arena" class="rank-arena-card" data-rank="e">
+            <div class="rank-character-pane">
+                <div class="rank-character-model" id="rank-character-model">
+                    <div class="rank-character-shadow"></div>
+                    <div class="rank-character-body">
+                        <div class="rank-character-head"></div>
+                        <div class="rank-character-torso"></div>
+                        <div class="rank-character-leg left"></div>
+                        <div class="rank-character-leg right"></div>
+                        <div class="rank-character-arm left"></div>
+                        <div class="rank-character-arm right"></div>
+                    </div>
+                    <div class="rank-character-emblem" id="rank-character-emblem">E</div>
+                </div>
+                <div class="rank-character-copy">
+                    <p class="eyebrow">Rank Character</p>
+                    <h3 id="rank-character-name">Luna Start</h3>
+                    <p id="rank-character-title">Origin Spark</p>
+                </div>
+            </div>
+            <div class="rank-progress-pane">
+                <div class="rank-top-row">
+                    <span id="rank-badge"><i class="fas fa-seedling"></i> Rank E</span>
+                    <strong id="rank-score-value">0/100 Power</strong>
+                </div>
+                <div class="rank-progress-track">
+                    <span id="rank-tier-progress"></span>
+                </div>
+                <small id="rank-next-hint">Start your first habit to begin climbing ranks.</small>
+                <div class="rank-metric-row">
+                    <div class="rank-metric-chip"><span>Best Streak</span><strong id="rank-streak-value">0d</strong></div>
+                    <div class="rank-metric-chip"><span>30-Day Rate</span><strong id="rank-consistency-value">0%</strong></div>
+                    <div class="rank-metric-chip"><span>Total Wins</span><strong id="rank-volume-value">0</strong></div>
+                </div>
+            </div>
+        </section>
         <section class="quick-suggestions">
             <div class="section-title-row">
                 <h2><i class="fas fa-wand-magic-sparkles"></i> Quick Suggestions</h2>
@@ -162,6 +198,48 @@
                     <p id="learning-domain-copy" class="domain-copy">Track focused learning sessions and show consistent growth.</p>
                     <div id="learning-domain-quick-add" class="domain-actions"></div>
                     <div id="learning-domain-list" class="domain-list"></div>
+                </article>
+            </div>
+        </section>
+        <section class="planner-arena">
+            <div class="section-title-row">
+                <h2><i class="fas fa-clipboard-list"></i> Gym & Learning Planner Arena</h2>
+                <span class="section-chip">Write plans, log done work, track momentum</span>
+            </div>
+            <div class="planner-grid">
+                <article class="planner-panel gym-planner">
+                    <div class="planner-head">
+                        <h3><i class="fas fa-dumbbell"></i> Gym Plans</h3>
+                        <span id="gym-plan-stats">0 done / 0 total</span>
+                    </div>
+                    <div class="planner-entry-form">
+                        <textarea id="gym-plan-input" placeholder="Example: Push workout, 4 sets bench, 12 min treadmill"></textarea>
+                        <div class="planner-form-row">
+                            <select id="gym-plan-type">
+                                <option value="done">I did this</option>
+                                <option value="plan">Planned workout</option>
+                            </select>
+                            <button id="gym-plan-add-btn" class="btn-secondary"><i class="fas fa-plus"></i> Add Gym Entry</button>
+                        </div>
+                    </div>
+                    <div id="gym-plan-list" class="planner-list"></div>
+                </article>
+                <article class="planner-panel learning-planner">
+                    <div class="planner-head">
+                        <h3><i class="fas fa-book-open"></i> Learning Plans</h3>
+                        <span id="learning-plan-stats">0 done / 0 total</span>
+                    </div>
+                    <div class="planner-entry-form">
+                        <textarea id="learning-plan-input" placeholder="Example: Learn recursion, 2 chapters database indexing, 20 flashcards"></textarea>
+                        <div class="planner-form-row">
+                            <select id="learning-plan-type">
+                                <option value="done">I studied this</option>
+                                <option value="plan">Planned topic</option>
+                            </select>
+                            <button id="learning-plan-add-btn" class="btn-secondary"><i class="fas fa-plus"></i> Add Learning Entry</button>
+                        </div>
+                    </div>
+                    <div id="learning-plan-list" class="planner-list"></div>
                 </article>
             </div>
         </section>
