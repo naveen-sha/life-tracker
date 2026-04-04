@@ -11,6 +11,9 @@
 <body>
     <nav class="navbar">
         <div class="nav-container">
+            <button id="mobile-menu-toggle" class="mobile-menu-btn" aria-label="Open navigation menu" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
             <h1 class="nav-logo">
                 <span class="nav-logo-mark" aria-hidden="true">
                     <i class="fas fa-calendar-check"></i>
@@ -29,6 +32,7 @@
             <button id="dark-mode-toggle"><i class="fas fa-moon"></i></button>
         </div>
     </nav>
+    <div class="mobile-nav-overlay" id="mobile-nav-overlay"></div>
     <div class="container">
         <h1><i class="fas fa-chart-bar"></i> Detailed Statistics</h1>
         <div class="stats-section">
@@ -105,6 +109,7 @@
     </footer>
     <script src="app-storage.js"></script>
     <script src="app-data.js"></script>
+    <script src="app-ui.js"></script>
     <script src="stats.js"></script>
 </body>
 </html>

@@ -19,8 +19,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const sidebarClose = document.getElementById('sidebar-close');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const navMenu = document.querySelector('.nav-menu');
     const suggestionChipsEl = document.getElementById('suggestion-chips');
+    const quickFiltersEl = document.getElementById('quick-filters');
+    const habitCountStatusEl = document.getElementById('habit-count-status');
     const dashboardWelcomeEl = document.getElementById('dashboard-welcome');
     const dashboardSubtitleEl = document.getElementById('dashboard-subtitle');
     const achievementProgressTextEl = document.getElementById('achievement-progress-text');
@@ -36,6 +37,41 @@ document.addEventListener('DOMContentLoaded', function() {
     let darkMode = profile.darkMode;
     let categories = profile.categories || HabitTrackerData.DEFAULT_CATEGORIES;
     let progressChart = null;
+    let currentFilter = 'all';
+    let undoPayload = null;
+    let undoTimer = null;
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function calculateCurrentStreak(history) {
+        const completed = new Set(Array.isArray(history) ? history : []);
+        let streak = 0;
+        const cursor = new Date();
+
+        while (completed.has(cursor.toDateString())) {
+            streak += 1;
+            cursor.setDate(cursor.getDate() - 1);
+        }
+
+        return streak;
+    }
+
+    function normalizeHabitState(habit) {
+        habit.history = [...new Set(Array.isArray(habit.history) ? habit.history : [])];
+        habit.completedToday = habit.history.includes(HabitTrackerData.getTodayString());
+        habit.streak = calculateCurrentStreak(habit.history);
+    }
+
+    function normalizeHabitsState() {
+        habits.forEach(normalizeHabitState);
+    }
 
     function saveHabits() {
         storage.saveHabits(habits);
@@ -94,6 +130,91 @@ document.addEventListener('DOMContentLoaded', function() {
         return sorted;
     }
 
+    function isDuplicateHabit(name, category, excludedHabit) {
+        const normalizedName = name.trim().toLowerCase();
+        const normalizedCategory = category.trim().toLowerCase();
+
+        return habits.some(habit => {
+            if (excludedHabit && habit === excludedHabit) {
+                return false;
+            }
+
+            return habit.name.trim().toLowerCase() === normalizedName &&
+                habit.category.trim().toLowerCase() === normalizedCategory;
+        });
+    }
+
+    function setFilter(filterValue) {
+        currentFilter = filterValue;
+        if (!quickFiltersEl) {
+            return;
+        }
+
+        quickFiltersEl.querySelectorAll('.filter-pill').forEach(button => {
+            button.classList.toggle('active', button.dataset.filter === currentFilter);
+        });
+    }
+
+    function getVisibleHabits() {
+        const searchTerm = (searchInput.value || '').trim().toLowerCase();
+        const today = HabitTrackerData.getTodayString();
+
+        return habits.filter(habit => {
+            if (searchTerm && !habit.name.toLowerCase().includes(searchTerm) && !habit.category.toLowerCase().includes(searchTerm)) {
+                return false;
+            }
+
+            if (currentFilter === 'today') {
+                return habit.history.includes(today);
+            }
+
+            if (currentFilter === 'pending') {
+                return !habit.history.includes(today);
+            }
+
+            if (currentFilter === 'high-streak') {
+                return habit.streak >= 7;
+            }
+
+            return true;
+        });
+    }
+
+    function renderHabits() {
+        const habitsToRender = sortHabits(getVisibleHabits());
+        habitsList.innerHTML = '';
+
+        if (habitCountStatusEl) {
+            habitCountStatusEl.textContent = `${habitsToRender.length} of ${habits.length} habits shown`;
+        }
+
+        if (!habitsToRender.length) {
+            habitsList.innerHTML = '<div class="empty-state-card">No habits match your current filters. Try another filter or search term.</div>';
+            return;
+        }
+
+        const grouped = habitsToRender.reduce((acc, habit) => {
+            if (!acc[habit.category]) {
+                acc[habit.category] = [];
+            }
+
+            acc[habit.category].push(habit);
+            return acc;
+        }, {});
+
+        Object.keys(grouped).forEach(category => {
+            const section = document.createElement('div');
+            section.className = 'category-section';
+            section.innerHTML = `<h2 class="category-title">${escapeHtml(category)}</h2>`;
+
+            grouped[category].forEach(habit => {
+                section.appendChild(createHabitCard(habit));
+            });
+
+            habitsList.appendChild(section);
+        });
+    }
+
     function refreshAll() {
         renderHabits();
         renderChart();
@@ -106,39 +227,124 @@ document.addEventListener('DOMContentLoaded', function() {
         renderCategoryHighlights();
     }
 
-    function handleHabitToggle(habit, checked) {
-        habit.completedToday = checked;
-        const today = HabitTrackerData.getTodayString();
-
-        if (checked) {
-            if (!habit.history.includes(today)) {
-                habit.history.push(today);
-                habit.streak += 1;
-
-                if (typeof confetti === 'function') {
-                    confetti({
-                        particleCount: 100,
-                        spread: 70,
-                        origin: { y: 0.6 }
-                    });
-                }
-            }
-        } else {
-            const index = habit.history.indexOf(today);
-            if (index > -1) {
-                habit.history.splice(index, 1);
-            }
-            habit.streak = Math.max(0, habit.streak - 1);
+    function showUndoToast(message, onUndo) {
+        const existingToast = document.querySelector('.toast');
+        if (existingToast) {
+            existingToast.remove();
         }
 
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `
+            <span>${escapeHtml(message)}</span>
+            <button type="button">Undo</button>
+        `;
+
+        const undoButton = toast.querySelector('button');
+        undoButton.addEventListener('click', function() {
+            clearTimeout(undoTimer);
+            undoTimer = null;
+            undoPayload = null;
+            onUndo();
+            toast.remove();
+        });
+
+        document.body.appendChild(toast);
+
+        clearTimeout(undoTimer);
+        undoTimer = setTimeout(function() {
+            undoPayload = null;
+            toast.remove();
+        }, 5000);
+    }
+
+    function handleHabitToggle(habit, checked) {
+        const today = HabitTrackerData.getTodayString();
+        const todayIndex = habit.history.indexOf(today);
+
+        if (checked && todayIndex === -1) {
+            habit.history.push(today);
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        if (!checked && todayIndex > -1) {
+            habit.history.splice(todayIndex, 1);
+        }
+
+        normalizeHabitState(habit);
+        saveHabits();
+        refreshAll();
+    }
+
+    function editHabit(habit) {
+        const nextName = window.prompt('Edit habit name:', habit.name);
+        if (nextName === null) {
+            return;
+        }
+
+        const trimmedName = nextName.trim();
+        if (!trimmedName) {
+            return;
+        }
+
+        const nextCategoryRaw = window.prompt(
+            `Edit category (existing: ${categories.join(', ')}):`,
+            habit.category
+        );
+        if (nextCategoryRaw === null) {
+            return;
+        }
+
+        const trimmedCategory = nextCategoryRaw.trim() || habit.category;
+
+        if (isDuplicateHabit(trimmedName, trimmedCategory, habit)) {
+            showUndoToast('Habit already exists in this category.', function() {});
+            return;
+        }
+
+        habit.name = trimmedName;
+        habit.category = trimmedCategory;
+
+        if (!categories.includes(trimmedCategory)) {
+            categories.push(trimmedCategory);
+            saveCategories();
+            updateCategorySelect();
+            renderSuggestionChips();
+        }
+
+        normalizeHabitState(habit);
         saveHabits();
         refreshAll();
     }
 
     function deleteHabit(habit) {
-        habits = habits.filter(item => item !== habit);
+        const index = habits.indexOf(habit);
+        if (index === -1) {
+            return;
+        }
+
+        const removed = habits.splice(index, 1)[0];
         saveHabits();
         refreshAll();
+
+        undoPayload = { removed, index };
+        showUndoToast(`Deleted "${removed.name}"`, function() {
+            if (!undoPayload) {
+                return;
+            }
+
+            const safeIndex = Math.max(0, Math.min(undoPayload.index, habits.length));
+            habits.splice(safeIndex, 0, undoPayload.removed);
+            undoPayload = null;
+            saveHabits();
+            refreshAll();
+        });
     }
 
     function createHabitCard(habit) {
@@ -152,10 +358,12 @@ document.addEventListener('DOMContentLoaded', function() {
         habitItem.innerHTML = `
             <div class="habit-header">
                 <div>
-                    <span class="habit-name">${habit.name}</span>
+                    <div class="habit-title-row">
+                        <span class="habit-name">${escapeHtml(habit.name)}</span>
+                    </div>
                     <div class="habit-meta-row">
-                        <span class="habit-tag">${habit.category}</span>
-                        <span class="habit-tag">${level}</span>
+                        <span class="habit-tag">${escapeHtml(habit.category)}</span>
+                        <span class="habit-tag">${escapeHtml(level)}</span>
                         <span class="habit-tag">${last30Rate.percentage}% in 30 days</span>
                     </div>
                 </div>
@@ -164,21 +372,32 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input type="checkbox" class="checkbox" ${habit.completedToday ? 'checked' : ''}>
                     </label>
                     <div class="streak-container">
-                        <span class="streak">🔥 ${habit.streak}</span>
+                        <span class="streak"><i class="fas fa-fire"></i> ${habit.streak}</span>
                         <div class="progress-bar">
                             <div class="progress-fill" style="width:${Math.min((habit.streak / 30) * 100, 100)}%"></div>
                         </div>
                     </div>
-                    <button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                    <div class="habit-action-buttons">
+                        <button class="edit-btn"><i class="fas fa-pen"></i> Edit</button>
+                        <button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>
+                    </div>
                 </div>
             </div>
         `;
 
         const checkbox = habitItem.querySelector('.checkbox');
+        const editBtn = habitItem.querySelector('.edit-btn');
         const deleteBtn = habitItem.querySelector('.delete-btn');
 
-        checkbox.addEventListener('change', () => handleHabitToggle(habit, checkbox.checked));
-        deleteBtn.addEventListener('click', () => deleteHabit(habit));
+        checkbox.addEventListener('change', function() {
+            handleHabitToggle(habit, checkbox.checked);
+        });
+        editBtn.addEventListener('click', function() {
+            editHabit(habit);
+        });
+        deleteBtn.addEventListener('click', function() {
+            deleteHabit(habit);
+        });
 
         const progressTable = document.createElement('table');
         progressTable.className = 'progress-table';
@@ -211,32 +430,6 @@ document.addEventListener('DOMContentLoaded', function() {
         habitItem.appendChild(progressTable);
 
         return habitItem;
-    }
-
-    function renderHabits(filteredHabits) {
-        const habitsToRender = sortHabits(filteredHabits || habits);
-        habitsList.innerHTML = '';
-
-        if (!habitsToRender.length) {
-            habitsList.innerHTML = '<div class="empty-state-card">No habits match right now. Try adding one or clear the search.</div>';
-            return;
-        }
-
-        const grouped = habitsToRender.reduce((acc, habit) => {
-            if (!acc[habit.category]) {
-                acc[habit.category] = [];
-            }
-            acc[habit.category].push(habit);
-            return acc;
-        }, {});
-
-        Object.keys(grouped).forEach(category => {
-            const section = document.createElement('div');
-            section.className = 'category-section';
-            section.innerHTML = `<h2 class="category-title">${category}</h2>`;
-            grouped[category].forEach(habit => section.appendChild(createHabitCard(habit)));
-            habitsList.appendChild(section);
-        });
     }
 
     function updateStats() {
@@ -299,8 +492,8 @@ document.addEventListener('DOMContentLoaded', function() {
             achievementEl.innerHTML = `
                 <i class="${achievement.icon} achievement-icon"></i>
                 <div class="achievement-text">
-                    <strong>${achievement.name}</strong>
-                    <small>${achievement.description}</small>
+                    <strong>${escapeHtml(achievement.name)}</strong>
+                    <small>${escapeHtml(achievement.description)}</small>
                     <div class="mini-progress-bar"><span style="width:${achievement.percentage}%"></span></div>
                 </div>
                 <span class="achievement-value">${achievement.current}/${achievement.target}</span>
@@ -322,7 +515,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const summaryItem = document.createElement('div');
             summaryItem.className = 'weekly-summary-item';
             summaryItem.innerHTML = `
-                <span class="habit-name">${habit.name}</span>
+                <span class="habit-name">${escapeHtml(habit.name)}</span>
                 <span class="progress">${habit.completedDays}/7 (${habit.percentage}%)</span>
             `;
             weeklySummaryEl.appendChild(summaryItem);
@@ -354,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
             dashboardSubtitleEl.textContent = 'Add a habit and start building a routine you can actually keep for the whole year.';
         } else if (metrics.weeklyCompletionRate >= 70) {
             dashboardWelcomeEl.textContent = 'You are in a strong rhythm';
-            dashboardSubtitleEl.textContent = `You have completed ${metrics.weeklyCompletionRate}% of this week’s habit slots. Keep that energy going.`;
+            dashboardSubtitleEl.textContent = `You have completed ${metrics.weeklyCompletionRate}% of this week's habit slots. Keep that energy going.`;
         } else {
             dashboardWelcomeEl.textContent = 'Small check-ins will move this fast';
             dashboardSubtitleEl.textContent = `You have ${metrics.totalCompletions} total completions so far. Today is a good day to push the streak forward.`;
@@ -378,14 +571,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const monthlyRate = HabitTrackerData.getHabitCompletionRate(bestHabit, 30);
         focusHabitCardEl.innerHTML = `
             <div class="focus-card">
-                <strong>${bestHabit.name}</strong>
-                <p>${bestHabit.category} is currently your strongest habit.</p>
+                <strong>${escapeHtml(bestHabit.name)}</strong>
+                <p>${escapeHtml(bestHabit.category)} is currently your strongest habit.</p>
                 <div class="summary-row-card">
                     <div>
                         <strong>${bestHabit.streak} day streak</strong>
                         <p>${monthlyRate.completed}/30 completions this month</p>
                     </div>
-                    <span>${HabitTrackerData.getHabitLevel(bestHabit)}</span>
+                    <span>${escapeHtml(HabitTrackerData.getHabitLevel(bestHabit))}</span>
                 </div>
             </div>
         `;
@@ -406,8 +599,8 @@ document.addEventListener('DOMContentLoaded', function() {
             card.innerHTML = `
                 <div class="mini-progress-header">
                     <div>
-                        <strong>${item.name}</strong>
-                        <p>${item.description}</p>
+                        <strong>${escapeHtml(item.name)}</strong>
+                        <p>${escapeHtml(item.description)}</p>
                     </div>
                     <span>${item.current}/${item.target}</span>
                 </div>
@@ -426,44 +619,53 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        entries.sort((a, b) => b[1].completions - a[1].completions).slice(0, 4).forEach(([name, data]) => {
-            const card = document.createElement('div');
-            card.className = 'summary-row-card';
-            card.innerHTML = `
-                <div>
-                    <strong>${name}</strong>
-                    <p>${data.habits} habits</p>
-                </div>
-                <span>${data.completions} wins</span>
-            `;
-            categoryHighlightsEl.appendChild(card);
-        });
-    }
-
-    function filterHabits(searchTerm) {
-        const filtered = habits.filter(habit =>
-            habit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            habit.category.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        renderHabits(filtered);
+        entries
+            .sort((a, b) => b[1].completions - a[1].completions)
+            .slice(0, 4)
+            .forEach(([name, data]) => {
+                const card = document.createElement('div');
+                card.className = 'summary-row-card';
+                card.innerHTML = `
+                    <div>
+                        <strong>${escapeHtml(name)}</strong>
+                        <p>${data.habits} habits</p>
+                    </div>
+                    <span>${data.completions} wins</span>
+                `;
+                categoryHighlightsEl.appendChild(card);
+            });
     }
 
     function addHabit(name, category) {
         const habitName = name.trim();
+        const categoryName = (category || categorySelect.value || 'General').trim();
+
         if (!habitName) {
-            return;
+            return false;
+        }
+
+        if (isDuplicateHabit(habitName, categoryName)) {
+            showUndoToast('Habit already exists in this category.', function() {});
+            return false;
         }
 
         habits.push({
             name: habitName,
-            category: category || categorySelect.value,
+            category: categoryName,
             streak: 0,
             completedToday: false,
             history: []
         });
 
+        if (!categories.includes(categoryName)) {
+            categories.push(categoryName);
+            saveCategories();
+            updateCategorySelect();
+        }
+
         saveHabits();
         refreshAll();
+        return true;
     }
 
     function renderSuggestionChips() {
@@ -473,78 +675,81 @@ document.addEventListener('DOMContentLoaded', function() {
             const button = document.createElement('button');
             button.className = 'suggestion-chip';
             button.textContent = suggestion;
-            button.addEventListener('click', () => {
-                habitInput.value = suggestion;
+            button.addEventListener('click', function() {
+                addHabit(suggestion, categorySelect.value);
+                habitInput.value = '';
                 habitInput.focus();
             });
             suggestionChipsEl.appendChild(button);
         });
     }
 
-    function toggleMobileMenu() {
-        navMenu.classList.toggle('mobile-open');
-    }
-
-    function closeMobileMenu() {
-        navMenu.classList.remove('mobile-open');
-    }
-
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.toggle('mobile-open');
         sidebarOverlay.classList.toggle('active');
-        document.body.style.overflow = sidebar.classList.contains('mobile-open') ? 'hidden' : '';
+
+        if (sidebar.classList.contains('mobile-open')) {
+            document.body.classList.add('ui-lock-scroll');
+        } else if (!document.querySelector('.nav-menu') || !document.querySelector('.nav-menu').classList.contains('mobile-open')) {
+            document.body.classList.remove('ui-lock-scroll');
+        }
     }
 
     function closeSidebar() {
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.remove('mobile-open');
         sidebarOverlay.classList.remove('active');
-        document.body.style.overflow = '';
+
+        if (!document.querySelector('.nav-menu') || !document.querySelector('.nav-menu').classList.contains('mobile-open')) {
+            document.body.classList.remove('ui-lock-scroll');
+        }
     }
 
     addHabitBtn.addEventListener('click', function() {
-        addHabit(habitInput.value, categorySelect.value);
-        habitInput.value = '';
-    });
-
-    habitInput.addEventListener('keydown', function(event) {
-        if (event.key === 'Enter') {
-            addHabit(habitInput.value, categorySelect.value);
+        const added = addHabit(habitInput.value, categorySelect.value);
+        if (added) {
             habitInput.value = '';
         }
     });
 
-    darkModeToggle.addEventListener('click', toggleDarkMode);
-    sortSelect.addEventListener('change', () => renderHabits());
-    searchInput.addEventListener('input', function() {
-        filterHabits(this.value);
+    habitInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const added = addHabit(habitInput.value, categorySelect.value);
+            if (added) {
+                habitInput.value = '';
+            }
+        }
     });
 
-    sidebarToggle.addEventListener('click', function() {
-        toggleMobileMenu();
-        toggleSidebar();
-    });
+    darkModeToggle.addEventListener('click', toggleDarkMode);
+    sortSelect.addEventListener('change', refreshAll);
+    searchInput.addEventListener('input', refreshAll);
+
+    if (quickFiltersEl) {
+        quickFiltersEl.addEventListener('click', function(event) {
+            const filterBtn = event.target.closest('.filter-pill');
+            if (!filterBtn) {
+                return;
+            }
+
+            setFilter(filterBtn.dataset.filter || 'all');
+            refreshAll();
+        });
+    }
+
+    sidebarToggle.addEventListener('click', toggleSidebar);
 
     if (sidebarClose) {
-        sidebarClose.addEventListener('click', function() {
-            closeMobileMenu();
-            closeSidebar();
-        });
+        sidebarClose.addEventListener('click', closeSidebar);
     }
 
     if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', function() {
-            closeMobileMenu();
-            closeSidebar();
-        });
+        sidebarOverlay.addEventListener('click', closeSidebar);
     }
 
     document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', function() {
-            closeMobileMenu();
-            closeSidebar();
-        });
+        link.addEventListener('click', closeSidebar);
     });
 
     const today = HabitTrackerData.getTodayString();
@@ -554,10 +759,12 @@ document.addEventListener('DOMContentLoaded', function() {
             habit.completedToday = false;
         });
         storage.setMeta('lastReset', today);
-        saveHabits();
     }
 
+    normalizeHabitsState();
+    saveHabits();
     saveCategories();
+    setFilter('all');
     document.body.classList.toggle('dark-mode', darkMode);
     darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     updateCategorySelect();

@@ -13,6 +13,9 @@
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-left">
+                <button id="mobile-menu-toggle" class="mobile-menu-btn" aria-label="Open navigation menu" aria-expanded="false">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <button id="sidebar-toggle" class="sidebar-toggle-btn">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -41,6 +44,7 @@
             </div>
         </div>
     </nav>
+    <div class="mobile-nav-overlay" id="mobile-nav-overlay"></div>
     <div class="main-content">
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -123,6 +127,13 @@
                 <h2><i class="fas fa-wand-magic-sparkles"></i> Quick Suggestions</h2>
                 <span class="section-chip">One click add</span>
             </div>
+            <div id="quick-filters" class="quick-filter-bar">
+                <button class="filter-pill active" data-filter="all">All</button>
+                <button class="filter-pill" data-filter="today">Done Today</button>
+                <button class="filter-pill" data-filter="pending">Pending Today</button>
+                <button class="filter-pill" data-filter="high-streak">7+ Streak</button>
+            </div>
+            <p id="habit-count-status" class="settings-caption">0 habits shown</p>
             <div id="suggestion-chips" class="suggestion-chips"></div>
         </section>
         <div class="stats-section">
@@ -187,6 +198,7 @@
     </footer>
     <script src="app-storage.js"></script>
     <script src="app-data.js"></script>
+    <script src="app-ui.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
