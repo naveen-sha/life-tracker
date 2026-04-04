@@ -58,11 +58,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const gymPlanAddBtnEl = document.getElementById('gym-plan-add-btn');
     const gymPlanListEl = document.getElementById('gym-plan-list');
     const gymPlanStatsEl = document.getElementById('gym-plan-stats');
+    const gymPlanDurationEl = document.getElementById('gym-plan-duration');
+    const gymPlanIntensityEl = document.getElementById('gym-plan-intensity');
     const learningPlanInputEl = document.getElementById('learning-plan-input');
     const learningPlanTypeEl = document.getElementById('learning-plan-type');
     const learningPlanAddBtnEl = document.getElementById('learning-plan-add-btn');
     const learningPlanListEl = document.getElementById('learning-plan-list');
     const learningPlanStatsEl = document.getElementById('learning-plan-stats');
+    const learningPlanDurationEl = document.getElementById('learning-plan-duration');
+    const learningPlanResourceEl = document.getElementById('learning-plan-resource');
+    const gymGoalTitleEl = document.getElementById('gym-goal-title');
+    const gymGoalTargetEl = document.getElementById('gym-goal-target');
+    const gymGoalDeadlineEl = document.getElementById('gym-goal-deadline');
+    const gymGoalRecurrenceEl = document.getElementById('gym-goal-recurrence');
+    const gymGoalAddBtnEl = document.getElementById('gym-goal-add-btn');
+    const gymGoalListEl = document.getElementById('gym-goal-list');
+    const gymGoalStatsEl = document.getElementById('gym-goal-stats');
+    const learningGoalTitleEl = document.getElementById('learning-goal-title');
+    const learningGoalTargetEl = document.getElementById('learning-goal-target');
+    const learningGoalDeadlineEl = document.getElementById('learning-goal-deadline');
+    const learningGoalRecurrenceEl = document.getElementById('learning-goal-recurrence');
+    const learningGoalAddBtnEl = document.getElementById('learning-goal-add-btn');
+    const learningGoalListEl = document.getElementById('learning-goal-list');
+    const learningGoalStatsEl = document.getElementById('learning-goal-stats');
 
     let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
     let darkMode = profile.darkMode;
@@ -72,9 +90,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let undoPayload = null;
     let undoTimer = null;
     let plannerState = storage.getMeta('domainPlanner') || { gym: [], learning: [] };
+    let goalState = storage.getMeta('domainGoals') || { gym: [], learning: [] };
     let cloudSyncTimer = null;
     let refreshRafId = 0;
     let searchDebounceTimer = null;
+    let profileSettings = {
+        ...storage.DEFAULT_SETTINGS,
+        ...(profile.settings || {})
+    };
+    let lastReminderTriggerKey = storage.getMeta('lastReminderTriggerKey') || '';
 
     function escapeHtml(value) {
         return String(value)
@@ -137,6 +161,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: String(item.text || '').trim(),
                 type: item.type === 'done' ? 'done' : 'plan',
                 completed: Boolean(item.completed),
+                duration: Math.max(0, Number(item.duration) || 0),
+                intensity: ['light', 'medium', 'hard'].includes(item.intensity) ? item.intensity : 'medium',
+                resource: String(item.resource || '').trim(),
                 createdAt: item.createdAt || new Date().toISOString()
             })).filter(item => item.text);
         });
@@ -146,6 +173,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function savePlannerState() {
         storage.setMeta('domainPlanner', plannerState);
+        scheduleCloudSync();
+    }
+
+    function normalizeGoalState() {
+        const safe = goalState && typeof goalState === 'object' ? goalState : {};
+
+        ['gym', 'learning'].forEach(domain => {
+            if (!Array.isArray(safe[domain])) {
+                safe[domain] = [];
+            }
+
+            safe[domain] = safe[domain].map(item => {
+                const target = Math.max(1, Number(item.target) || 1);
+                const completed = Math.max(0, Math.min(target, Number(item.completed) || 0));
+                return {
+                    id: item.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    title: String(item.title || '').trim(),
+                    target,
+                    completed,
+                    deadline: item.deadline || '',
+                    recurrence: ['daily', 'weekly', 'monthly', 'none'].includes(item.recurrence) ? item.recurrence : 'none',
+                    lastResetAt: item.lastResetAt || new Date().toISOString(),
+                    createdAt: item.createdAt || new Date().toISOString()
+                };
+            }).filter(item => item.title);
+        });
+
+        goalState = safe;
+    }
+
+    function saveGoalState() {
+        storage.setMeta('domainGoals', goalState);
         scheduleCloudSync();
     }
 
@@ -183,15 +242,142 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function playUISound(kind) {
+        if (!profileSettings.soundEffects) {
+            return;
+        }
+
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) {
+            return;
+        }
+
+        try {
+            const ctx = new AudioCtx();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            const now = ctx.currentTime;
+
+            if (kind === 'success') {
+                o.type = 'sine';
+                o.frequency.setValueAtTime(520, now);
+                o.frequency.exponentialRampToValueAtTime(760, now + 0.2);
+            } else if (kind === 'alarm') {
+                o.type = 'triangle';
+                o.frequency.setValueAtTime(440, now);
+                o.frequency.exponentialRampToValueAtTime(900, now + 0.4);
+            } else {
+                o.type = 'square';
+                o.frequency.setValueAtTime(420, now);
+            }
+
+            g.gain.setValueAtTime(0.0001, now);
+            g.gain.exponentialRampToValueAtTime(0.14, now + 0.03);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+            o.connect(g);
+            g.connect(ctx.destination);
+            o.start(now);
+            o.stop(now + 0.4);
+        } catch (error) {
+            // ignore audio failures
+        }
+    }
+
+    function shouldResetRecurringGoal(goal, now) {
+        if (!goal || goal.recurrence === 'none') {
+            return false;
+        }
+
+        const last = new Date(goal.lastResetAt || goal.createdAt || now.toISOString());
+        if (goal.recurrence === 'daily') {
+            return now.toDateString() !== last.toDateString();
+        }
+
+        if (goal.recurrence === 'weekly') {
+            const ms = now.getTime() - last.getTime();
+            return ms >= 7 * 24 * 60 * 60 * 1000;
+        }
+
+        if (goal.recurrence === 'monthly') {
+            return now.getMonth() !== last.getMonth() || now.getFullYear() !== last.getFullYear();
+        }
+
+        return false;
+    }
+
+    function applyRecurringGoalResets() {
+        const now = new Date();
+        let changed = false;
+
+        ['gym', 'learning'].forEach(function(domain) {
+            (goalState[domain] || []).forEach(function(goal) {
+                if (goal.recurrence !== 'none' && shouldResetRecurringGoal(goal, now)) {
+                    goal.completed = 0;
+                    goal.lastResetAt = now.toISOString();
+                    changed = true;
+                }
+            });
+        });
+
+        if (changed) {
+            saveGoalState();
+        }
+    }
+
+    function triggerReminderAlarm() {
+        if (profileSettings.alarmSound !== false) {
+            playUISound('alarm');
+        }
+
+        showUndoToast('Reminder: Time to check your habits and goals.', function() {});
+
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+                new Notification('Life Tracker Reminder', {
+                    body: 'Open your tracker and log your progress now.'
+                });
+            } else if (Notification.permission === 'default') {
+                Notification.requestPermission().catch(function() {});
+            }
+        }
+    }
+
+    function checkReminderAlarm() {
+        if (!profileSettings.reminders || !profileSettings.reminderTime) {
+            return;
+        }
+
+        const now = new Date();
+        const hhmm = now.toTimeString().slice(0, 5);
+        if (hhmm !== profileSettings.reminderTime) {
+            return;
+        }
+
+        const triggerKey = `${now.toDateString()}-${hhmm}`;
+        if (lastReminderTriggerKey === triggerKey) {
+            return;
+        }
+
+        lastReminderTriggerKey = triggerKey;
+        storage.setMeta('lastReminderTriggerKey', triggerKey);
+        triggerReminderAlarm();
+    }
+
     function reloadFromCurrentProfile() {
         profile = storage.getCurrentProfile();
         habits = HabitTrackerData.normalizeHabits(profile.habits || []);
         darkMode = profile.darkMode;
         categories = profile.categories || HabitTrackerData.DEFAULT_CATEGORIES;
+        profileSettings = {
+            ...storage.DEFAULT_SETTINGS,
+            ...(profile.settings || {})
+        };
         plannerState = storage.getMeta('domainPlanner') || { gym: [], learning: [] };
+        goalState = storage.getMeta('domainGoals') || { gym: [], learning: [] };
 
         ensureCoreCategories();
         normalizePlannerState();
+        normalizeGoalState();
         normalizeHabitsState();
         updateCategorySelect();
         renderSuggestionChips();
@@ -413,6 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderRankArena();
         renderDomainCommandCenter();
         renderPlannerArena();
+        renderGoalArena();
     }
 
     function renderRankArena() {
@@ -561,6 +748,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const categoryHabits = habits
             .filter(habit => habit.category.toLowerCase() === targetCategory)
             .sort((a, b) => b.streak - a.streak || b.history.length - a.history.length);
+        const domainGoals = goalState[targetCategory] || [];
+        const completedGoals = domainGoals.filter(goal => goal.completed >= goal.target).length;
 
         const weeklyRate = getCategoryWeeklyRate(categoryName);
         rateEl.textContent = `${weeklyRate}% this week`;
@@ -568,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!categoryHabits.length) {
             copyEl.textContent = `No ${categoryName.toLowerCase()} habits yet. Add one quick start and begin your streak.`;
         } else {
-            copyEl.textContent = `${categoryHabits.length} habits tracked. Best streak: ${categoryHabits[0].streak} days.`;
+            copyEl.textContent = `${categoryHabits.length} habits tracked. Best streak: ${categoryHabits[0].streak} days. Goals: ${completedGoals}/${domainGoals.length} completed.`;
         }
 
         quickAddEl.innerHTML = '';
@@ -622,22 +811,28 @@ document.addEventListener('DOMContentLoaded', function() {
         );
     }
 
-    function addPlannerEntry(domain, text, type) {
+    function addPlannerEntry(domain, text, type, options) {
         const normalizedDomain = domain === 'learning' ? 'learning' : 'gym';
         const trimmedText = text.trim();
         if (!trimmedText) {
             return;
         }
+        const meta = options && typeof options === 'object' ? options : {};
+        const duration = Math.max(0, Number(meta.duration) || 0);
 
         plannerState[normalizedDomain].unshift({
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             text: trimmedText,
             type: type === 'done' ? 'done' : 'plan',
             completed: type === 'done',
+            duration,
+            intensity: ['light', 'medium', 'hard'].includes(meta.intensity) ? meta.intensity : 'medium',
+            resource: String(meta.resource || '').trim(),
             createdAt: new Date().toISOString()
         });
 
         savePlannerState();
+        playUISound('success');
         renderPlannerArena();
     }
 
@@ -654,6 +849,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         savePlannerState();
+        playUISound('success');
         renderPlannerArena();
     }
 
@@ -689,6 +885,12 @@ document.addEventListener('DOMContentLoaded', function() {
         entries.slice(0, 10).forEach(item => {
             const row = document.createElement('div');
             row.className = `planner-item${item.completed ? ' completed' : ''}`;
+            const plannerMeta = [
+                item.duration > 0 ? `${item.duration} min` : '',
+                domain === 'gym' ? `Intensity: ${item.intensity}` : '',
+                domain === 'learning' && item.resource ? `Resource: ${escapeHtml(item.resource)}` : ''
+            ].filter(Boolean).join(' - ');
+
             row.innerHTML = `
                 <label class="planner-check">
                     <input type="checkbox" ${item.completed ? 'checked' : ''} data-domain="${domain}" data-id="${item.id}">
@@ -696,7 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </label>
                 <div class="planner-item-copy">
                     <strong>${escapeHtml(item.text)}</strong>
-                    <small>${item.type === 'done' ? 'Completed' : 'Planned'} · ${formatPlannerDate(item.createdAt)}</small>
+                    <small>${item.type === 'done' ? 'Completed' : 'Planned'} - ${formatPlannerDate(item.createdAt)}${plannerMeta ? ` - ${plannerMeta}` : ''}</small>
                 </div>
                 <button class="planner-delete-btn" data-domain="${domain}" data-id="${item.id}">
                     <i class="fas fa-trash"></i>
@@ -706,9 +908,110 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function addGoalEntry(domain, title, target, deadline, recurrence) {
+        const normalizedDomain = domain === 'learning' ? 'learning' : 'gym';
+        const trimmedTitle = String(title || '').trim();
+        const normalizedTarget = Math.max(1, Number(target) || 1);
+        const normalizedRecurrence = ['daily', 'weekly', 'monthly', 'none'].includes(recurrence) ? recurrence : 'none';
+        if (!trimmedTitle) {
+            return;
+        }
+
+        goalState[normalizedDomain].unshift({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title: trimmedTitle,
+            target: normalizedTarget,
+            completed: 0,
+            deadline: deadline || '',
+            recurrence: normalizedRecurrence,
+            lastResetAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+        });
+
+        saveGoalState();
+        playUISound('success');
+        renderGoalArena();
+        renderDomainCommandCenter();
+    }
+
+    function updateGoalProgress(domain, id, delta) {
+        const list = goalState[domain] || [];
+        const goal = list.find(item => item.id === id);
+        if (!goal) {
+            return;
+        }
+
+        goal.completed = Math.max(0, Math.min(goal.target, goal.completed + delta));
+        saveGoalState();
+        if (goal.completed >= goal.target) {
+            playUISound('success');
+        }
+        renderGoalArena();
+        renderDomainCommandCenter();
+    }
+
+    function removeGoalEntry(domain, id) {
+        goalState[domain] = (goalState[domain] || []).filter(item => item.id !== id);
+        saveGoalState();
+        renderGoalArena();
+        renderDomainCommandCenter();
+    }
+
+    function formatDeadline(value) {
+        if (!value) {
+            return 'No deadline';
+        }
+
+        try {
+            return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch (error) {
+            return 'No deadline';
+        }
+    }
+
+    function renderGoalDomain(domain, listEl, statsEl) {
+        if (!listEl || !statsEl) {
+            return;
+        }
+
+        const goals = goalState[domain] || [];
+        const completedCount = goals.filter(goal => goal.completed >= goal.target).length;
+        statsEl.textContent = `${completedCount} done / ${goals.length} total`;
+        listEl.innerHTML = '';
+
+        if (!goals.length) {
+            listEl.innerHTML = '<div class="mini-message-card">No goals yet. Add one target and start tracking progress.</div>';
+            return;
+        }
+
+        goals.slice(0, 12).forEach(goal => {
+            const percent = Math.round((goal.completed / goal.target) * 100);
+            const row = document.createElement('div');
+            row.className = `planner-item${goal.completed >= goal.target ? ' completed' : ''}`;
+            row.innerHTML = `
+                <div class="planner-item-copy">
+                    <strong>${escapeHtml(goal.title)}</strong>
+                    <small>${goal.completed}/${goal.target} sessions - Due: ${formatDeadline(goal.deadline)} - Repeat: ${goal.recurrence || 'none'}</small>
+                    <div class="mini-progress-bar"><span style="width:${percent}%"></span></div>
+                </div>
+                <div class="goal-actions">
+                    <button class="goal-action-btn" data-domain="${domain}" data-id="${goal.id}" data-action="dec">-1</button>
+                    <button class="goal-action-btn" data-domain="${domain}" data-id="${goal.id}" data-action="inc">+1</button>
+                    <button class="planner-delete-btn" data-domain="${domain}" data-id="${goal.id}" data-action="delete"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            listEl.appendChild(row);
+        });
+    }
+
     function renderPlannerArena() {
         renderPlannerDomain('gym', gymPlanListEl, gymPlanStatsEl);
         renderPlannerDomain('learning', learningPlanListEl, learningPlanStatsEl);
+    }
+
+    function renderGoalArena() {
+        renderGoalDomain('gym', gymGoalListEl, gymGoalStatsEl);
+        renderGoalDomain('learning', learningGoalListEl, learningGoalStatsEl);
     }
 
     function showUndoToast(message, onUndo) {
@@ -763,6 +1066,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         normalizeHabitState(habit);
         saveHabits();
+        if (checked) {
+            playUISound('success');
+        }
         refreshAll();
     }
 
@@ -1162,6 +1468,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         saveHabits();
+        playUISound('success');
         refreshAll();
         return true;
     }
@@ -1243,16 +1550,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (gymPlanAddBtnEl) {
         gymPlanAddBtnEl.addEventListener('click', function() {
-            addPlannerEntry('gym', gymPlanInputEl.value, gymPlanTypeEl.value);
+            addPlannerEntry('gym', gymPlanInputEl.value, gymPlanTypeEl.value, {
+                duration: gymPlanDurationEl ? gymPlanDurationEl.value : 0,
+                intensity: gymPlanIntensityEl ? gymPlanIntensityEl.value : 'medium'
+            });
             gymPlanInputEl.value = '';
+            if (gymPlanDurationEl) {
+                gymPlanDurationEl.value = '';
+            }
             gymPlanInputEl.focus();
         });
     }
 
     if (learningPlanAddBtnEl) {
         learningPlanAddBtnEl.addEventListener('click', function() {
-            addPlannerEntry('learning', learningPlanInputEl.value, learningPlanTypeEl.value);
+            addPlannerEntry('learning', learningPlanInputEl.value, learningPlanTypeEl.value, {
+                duration: learningPlanDurationEl ? learningPlanDurationEl.value : 0,
+                resource: learningPlanResourceEl ? learningPlanResourceEl.value : ''
+            });
             learningPlanInputEl.value = '';
+            if (learningPlanDurationEl) {
+                learningPlanDurationEl.value = '';
+            }
+            if (learningPlanResourceEl) {
+                learningPlanResourceEl.value = '';
+            }
             learningPlanInputEl.focus();
         });
     }
@@ -1286,12 +1608,83 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function handleGoalListInteraction(event) {
+        const actionBtn = event.target.closest('[data-action][data-domain][data-id]');
+        if (!actionBtn) {
+            return;
+        }
+
+        const domain = actionBtn.dataset.domain;
+        const id = actionBtn.dataset.id;
+        const action = actionBtn.dataset.action;
+
+        if (action === 'inc') {
+            updateGoalProgress(domain, id, 1);
+            return;
+        }
+
+        if (action === 'dec') {
+            updateGoalProgress(domain, id, -1);
+            return;
+        }
+
+        if (action === 'delete') {
+            removeGoalEntry(domain, id);
+        }
+    }
+
     if (gymPlanListEl) {
         gymPlanListEl.addEventListener('click', handlePlannerListInteraction);
     }
 
     if (learningPlanListEl) {
         learningPlanListEl.addEventListener('click', handlePlannerListInteraction);
+    }
+
+    if (gymGoalListEl) {
+        gymGoalListEl.addEventListener('click', handleGoalListInteraction);
+    }
+
+    if (learningGoalListEl) {
+        learningGoalListEl.addEventListener('click', handleGoalListInteraction);
+    }
+
+    if (gymGoalAddBtnEl) {
+        gymGoalAddBtnEl.addEventListener('click', function() {
+            addGoalEntry(
+                'gym',
+                gymGoalTitleEl.value,
+                gymGoalTargetEl.value,
+                gymGoalDeadlineEl.value,
+                gymGoalRecurrenceEl ? gymGoalRecurrenceEl.value : 'none'
+            );
+            gymGoalTitleEl.value = '';
+            gymGoalTargetEl.value = '';
+            gymGoalDeadlineEl.value = '';
+            if (gymGoalRecurrenceEl) {
+                gymGoalRecurrenceEl.value = 'none';
+            }
+            gymGoalTitleEl.focus();
+        });
+    }
+
+    if (learningGoalAddBtnEl) {
+        learningGoalAddBtnEl.addEventListener('click', function() {
+            addGoalEntry(
+                'learning',
+                learningGoalTitleEl.value,
+                learningGoalTargetEl.value,
+                learningGoalDeadlineEl.value,
+                learningGoalRecurrenceEl ? learningGoalRecurrenceEl.value : 'none'
+            );
+            learningGoalTitleEl.value = '';
+            learningGoalTargetEl.value = '';
+            learningGoalDeadlineEl.value = '';
+            if (learningGoalRecurrenceEl) {
+                learningGoalRecurrenceEl.value = 'none';
+            }
+            learningGoalTitleEl.focus();
+        });
     }
 
     sidebarToggle.addEventListener('click', toggleSidebar);
@@ -1330,6 +1723,9 @@ document.addEventListener('DOMContentLoaded', function() {
     ensureCoreCategories();
     normalizePlannerState();
     savePlannerState();
+    normalizeGoalState();
+    applyRecurringGoalResets();
+    saveGoalState();
     normalizeHabitsState();
     saveHabits();
     saveCategories();
@@ -1339,6 +1735,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateCategorySelect();
     updateLiveDateTime();
     setInterval(updateLiveDateTime, 1000);
+    setInterval(checkReminderAlarm, 20000);
     updateDailyTip();
     renderSuggestionChips();
     setup3DInteractions();
@@ -1347,4 +1744,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (canCloudSync()) {
         cloud.sync().catch(function() {});
     }
+
+    checkReminderAlarm();
 });
+
+

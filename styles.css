@@ -3252,3 +3252,99 @@ body.ui-lock-scroll {
         color: black !important;
     }
 }
+
+.goal-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.goal-action-btn {
+    border: 1px solid rgba(0, 123, 255, 0.25);
+    background: rgba(0, 123, 255, 0.1);
+    color: #0b3d91;
+    border-radius: 8px;
+    min-width: 34px;
+    height: 34px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+body.dark-mode .goal-action-btn {
+    color: #8cc6ff;
+    border-color: rgba(77, 171, 247, 0.4);
+    background: rgba(77, 171, 247, 0.15);
+}
+
+.calendar-day {
+    border: none;
+    font: inherit;
+}
+
+.calendar-day.selected {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+body.dark-mode .calendar-day.selected {
+    outline-color: #4dabf7;
+}
+
+.calendar-day-events {
+    position: absolute;
+    right: 4px;
+    top: 4px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #007bff;
+    color: #fff;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+body.dark-mode .calendar-day-events {
+    background: #4dabf7;
+    color: #0f172a;
+}
+
+#cal-event-note {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 88px;
+    resize: vertical;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 123, 255, 0.2);
+    padding: 10px;
+    font: inherit;
+}
+
+body.dark-mode #cal-event-note {
+    border-color: rgba(77, 171, 247, 0.38);
+    background: rgba(15, 23, 42, 0.75);
+    color: #e2e8f0;
+}
+.planner-form-row input,
+.planner-form-row select,
+.planner-form-row button {
+    flex: 1;
+    min-width: 120px;
+}
+
+@media (max-width: 768px) {
+    .planner-form-row input,
+    .planner-form-row select,
+    .planner-form-row button {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .goal-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

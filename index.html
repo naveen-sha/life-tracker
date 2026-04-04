@@ -220,6 +220,12 @@
                     <div class="planner-entry-form">
                         <textarea id="gym-plan-input" placeholder="Example: Push workout, 4 sets bench, 12 min treadmill"></textarea>
                         <div class="planner-form-row">
+                            <input id="gym-plan-duration" type="number" min="5" step="5" placeholder="Minutes">
+                            <select id="gym-plan-intensity">
+                                <option value="medium">Intensity: Medium</option>
+                                <option value="light">Intensity: Light</option>
+                                <option value="hard">Intensity: Hard</option>
+                            </select>
                             <select id="gym-plan-type">
                                 <option value="done">I did this</option>
                                 <option value="plan">Planned workout</option>
@@ -237,6 +243,8 @@
                     <div class="planner-entry-form">
                         <textarea id="learning-plan-input" placeholder="Example: Learn recursion, 2 chapters database indexing, 20 flashcards"></textarea>
                         <div class="planner-form-row">
+                            <input id="learning-plan-duration" type="number" min="5" step="5" placeholder="Minutes">
+                            <input id="learning-plan-resource" type="text" placeholder="Resource (book/course/video)">
                             <select id="learning-plan-type">
                                 <option value="done">I studied this</option>
                                 <option value="plan">Planned topic</option>
@@ -245,6 +253,52 @@
                         </div>
                     </div>
                     <div id="learning-plan-list" class="planner-list"></div>
+                </article>
+            </div>
+        </section>
+        <section class="planner-arena">
+            <div class="section-title-row">
+                <h2><i class="fas fa-bullseye"></i> Goal Tracker (Gym + Learning)</h2>
+                <span class="section-chip">Set targets, update progress, hit deadlines</span>
+            </div>
+            <div class="planner-grid">
+                <article class="planner-panel gym-planner">
+                    <div class="planner-head">
+                        <h3><i class="fas fa-dumbbell"></i> Gym Goals</h3>
+                        <span id="gym-goal-stats">0 active goals</span>
+                    </div>
+                    <div class="planner-form-row">
+                        <input id="gym-goal-title" type="text" placeholder="Goal title">
+                        <input id="gym-goal-target" type="number" min="1" placeholder="Target sessions">
+                        <input id="gym-goal-deadline" type="date">
+                        <select id="gym-goal-recurrence">
+                            <option value="none">One time</option>
+                            <option value="daily">Repeat daily</option>
+                            <option value="weekly">Repeat weekly</option>
+                            <option value="monthly">Repeat monthly</option>
+                        </select>
+                        <button id="gym-goal-add-btn" class="btn-secondary"><i class="fas fa-plus"></i> Add Goal</button>
+                    </div>
+                    <div id="gym-goal-list" class="planner-list"></div>
+                </article>
+                <article class="planner-panel learning-planner">
+                    <div class="planner-head">
+                        <h3><i class="fas fa-book-open"></i> Learning Goals</h3>
+                        <span id="learning-goal-stats">0 active goals</span>
+                    </div>
+                    <div class="planner-form-row">
+                        <input id="learning-goal-title" type="text" placeholder="Goal title">
+                        <input id="learning-goal-target" type="number" min="1" placeholder="Target sessions">
+                        <input id="learning-goal-deadline" type="date">
+                        <select id="learning-goal-recurrence">
+                            <option value="none">One time</option>
+                            <option value="daily">Repeat daily</option>
+                            <option value="weekly">Repeat weekly</option>
+                            <option value="monthly">Repeat monthly</option>
+                        </select>
+                        <button id="learning-goal-add-btn" class="btn-secondary"><i class="fas fa-plus"></i> Add Goal</button>
+                    </div>
+                    <div id="learning-goal-list" class="planner-list"></div>
                 </article>
             </div>
         </section>

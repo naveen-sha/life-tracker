@@ -4,7 +4,9 @@
     const DEFAULT_SETTINGS = {
         theme: 'light',
         reminders: false,
-        reminderTime: '09:00'
+        reminderTime: '09:00',
+        soundEffects: true,
+        alarmSound: true
     };
 
     function clone(value) {

@@ -63,6 +63,41 @@
                 <span>No habits completed</span>
             </div>
         </div>
+        <section class="settings-section">
+            <h2><i class="fas fa-signal"></i> Monthly Snapshot</h2>
+            <div class="stats-grid">
+                <div class="stat-card"><i class="fas fa-calendar-check"></i><div><h3 id="cal-total-days">0</h3><p>Active Days</p></div></div>
+                <div class="stat-card"><i class="fas fa-fire"></i><div><h3 id="cal-best-streak">0</h3><p>Best Active Streak</p></div></div>
+                <div class="stat-card"><i class="fas fa-bolt"></i><div><h3 id="cal-current-streak">0</h3><p>Current Streak</p></div></div>
+                <div class="stat-card"><i class="fas fa-percent"></i><div><h3 id="cal-active-rate">0%</h3><p>Month Activity</p></div></div>
+            </div>
+        </section>
+        <section class="settings-section">
+            <h2><i class="fas fa-list-check"></i> Selected Day Details</h2>
+            <p id="cal-day-title" class="settings-caption">Select a day</p>
+            <p id="cal-day-summary" class="settings-caption">No details yet.</p>
+            <div id="cal-day-habits" class="profile-list"></div>
+        </section>
+        <section class="settings-section">
+            <h2><i class="fas fa-pen-to-square"></i> Daily Notes & Events</h2>
+            <div class="planner-form-row">
+                <input id="cal-event-date" type="date">
+                <select id="cal-event-type">
+                    <option value="workout">Workout</option>
+                    <option value="study">Study</option>
+                    <option value="task">Task</option>
+                    <option value="personal">Personal</option>
+                </select>
+                <input id="cal-event-title" type="text" placeholder="Title">
+                <button id="cal-event-add-btn" class="btn-secondary"><i class="fas fa-plus"></i> Add</button>
+            </div>
+            <textarea id="cal-event-note" placeholder="Optional note"></textarea>
+            <div id="calendar-event-list" class="planner-list"></div>
+        </section>
+        <section class="settings-section">
+            <h2><i class="fas fa-forward"></i> Upcoming Plans & Goals</h2>
+            <div id="calendar-upcoming-list" class="planner-list"></div>
+        </section>
     </div>
     <footer class="site-footer">
         <p>&copy; 2026 Life Tracker. All rights reserved.</p>
@@ -73,6 +108,7 @@
     <script src="firebase-config.js"></script>
     <script src="app-cloud.js"></script>
     <script src="app-storage.js"></script>
+    <script src="app-data.js"></script>
     <script src="app-ui.js"></script>
     <script src="calendar.js"></script>
 </body>

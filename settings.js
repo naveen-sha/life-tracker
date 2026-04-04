@@ -12,6 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const clearDataBtn = document.getElementById('clear-data-btn');
     const reminderToggle = document.getElementById('reminder-toggle');
     const reminderTime = document.getElementById('reminder-time');
+    const soundEffectsToggle = document.getElementById('sound-effects-toggle');
+    const alarmSoundToggle = document.getElementById('alarm-sound-toggle');
+    const testAlarmBtn = document.getElementById('test-alarm-btn');
     const activeProfileNameEl = document.getElementById('active-profile-name');
     const activeProfileMetaEl = document.getElementById('active-profile-meta');
     const activeProfileCountEl = document.getElementById('active-profile-count');
@@ -392,6 +395,40 @@ document.addEventListener('DOMContentLoaded', function() {
         saveSettings();
     });
 
+    soundEffectsToggle.addEventListener('change', function() {
+        settings.soundEffects = this.checked;
+        saveSettings();
+    });
+
+    alarmSoundToggle.addEventListener('change', function() {
+        settings.alarmSound = this.checked;
+        saveSettings();
+    });
+
+    testAlarmBtn.addEventListener('click', function() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+                const ctx = new AudioCtx();
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sine';
+                o.frequency.setValueAtTime(540, ctx.currentTime);
+                o.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.45);
+                g.gain.setValueAtTime(0.001, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.05);
+                g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.62);
+                o.connect(g);
+                g.connect(ctx.destination);
+                o.start();
+                o.stop(ctx.currentTime + 0.65);
+            }
+            setCloudStatus('Alarm test played.');
+        } catch (error) {
+            setCloudStatus('Could not play alarm sound in this browser.');
+        }
+    });
+
     darkModeToggle.addEventListener('click', toggleDarkMode);
 
     window.addEventListener('life-tracker-auth-changed', renderCloudState);
@@ -406,6 +443,8 @@ document.addEventListener('DOMContentLoaded', function() {
     themeSelect.value = settings.theme;
     reminderToggle.checked = settings.reminders;
     reminderTime.value = settings.reminderTime;
+    soundEffectsToggle.checked = settings.soundEffects !== false;
+    alarmSoundToggle.checked = settings.alarmSound !== false;
     renderProfiles();
     renderCategories();
     renderCloudState();
