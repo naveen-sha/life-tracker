@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const storage = window.HabitTrackerStorage;
+    const ui = window.HabitTrackerUI || {};
     let profile = storage.getCurrentProfile();
 
     const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -30,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let plannerState = storage.getMeta('domainPlanner') || { gym: [], learning: [] };
     let goalState = storage.getMeta('domainGoals') || { gym: [], learning: [] };
     let calendarEvents = storage.getMeta('calendarEvents') || [];
-    let darkMode = profile.darkMode;
+    let darkMode = typeof ui.resolveDarkMode === 'function' ? ui.resolveDarkMode(profile) : profile.darkMode;
     let currentDate = new Date();
     let selectedDate = new Date();
     let profileSettings = {
@@ -92,7 +93,7 @@ document.addEventListener('DOMContentLoaded', function() {
         plannerState = storage.getMeta('domainPlanner') || { gym: [], learning: [] };
         goalState = storage.getMeta('domainGoals') || { gym: [], learning: [] };
         calendarEvents = storage.getMeta('calendarEvents') || [];
-        darkMode = profile.darkMode;
+        darkMode = typeof ui.resolveDarkMode === 'function' ? ui.resolveDarkMode(profile) : profile.darkMode;
         profileSettings = {
             ...storage.DEFAULT_SETTINGS,
             ...(profile.settings || {})
@@ -202,7 +203,11 @@ document.addEventListener('DOMContentLoaded', function() {
         darkMode = !darkMode;
         document.body.classList.toggle('dark-mode', darkMode);
         storage.setDarkMode(darkMode);
-        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        if (typeof ui.renderThemeToggleIcon === 'function') {
+            ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+        } else {
+            darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        }
     }
 
     function getDayCompletionCount(dayString) {
@@ -548,7 +553,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize
     refreshState();
     document.body.classList.toggle('dark-mode', darkMode);
-    darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    if (typeof ui.renderThemeToggleIcon === 'function') {
+        ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+    } else {
+        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    }
     calEventDateEl.value = formatISO(selectedDate);
     renderCalendar();
     renderSelectedDayDetails();

@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const storage = window.HabitTrackerStorage;
+    const ui = window.HabitTrackerUI || {};
     const profile = storage.getCurrentProfile();
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const roadmapConsistencyEl = document.getElementById('roadmap-consistency');
@@ -9,13 +10,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const categoryMomentumEl = document.getElementById('category-momentum');
 
     let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
-    let darkMode = profile.darkMode;
+    let darkMode = typeof ui.resolveDarkMode === 'function' ? ui.resolveDarkMode(profile) : profile.darkMode;
 
     function toggleDarkMode() {
         darkMode = !darkMode;
         document.body.classList.toggle('dark-mode', darkMode);
         storage.setDarkMode(darkMode);
-        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        if (typeof ui.renderThemeToggleIcon === 'function') {
+            ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+        } else {
+            darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        }
     }
 
     function renderRoadmap() {
@@ -28,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = document.createElement('div');
             row.className = `roadmap-item${item.unlocked ? ' done' : ''}`;
             row.innerHTML = `
-                <div class="roadmap-marker"><i class="${item.icon}"></i></div>8
+                <div class="roadmap-marker"><i class="${item.icon}"></i></div>
                 <div class="roadmap-content">
                     <div class="section-title-row">
                         <strong>${item.name}</strong>
@@ -96,7 +101,11 @@ document.addEventListener('DOMContentLoaded', function() {
     darkModeToggle.addEventListener('click', toggleDarkMode);
 
     document.body.classList.toggle('dark-mode', darkMode);
-    darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    if (typeof ui.renderThemeToggleIcon === 'function') {
+        ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+    } else {
+        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    }
     renderRoadmap();
     renderMomentumNotes();
     renderCategoryMomentum();

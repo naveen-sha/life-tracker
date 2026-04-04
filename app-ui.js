@@ -1,6 +1,47 @@
 document.addEventListener('DOMContentLoaded', function() {
     const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const isCoarse = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    const storage = window.HabitTrackerStorage;
+
+    function resolveDarkMode(profile) {
+        const safeProfile = profile || {};
+        const settings = safeProfile.settings || {};
+        const theme = settings.theme || 'light';
+
+        if (theme === 'dark') {
+            return true;
+        }
+
+        if (theme === 'light') {
+            return false;
+        }
+
+        if (theme === 'auto') {
+            return Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        }
+
+        return Boolean(safeProfile.darkMode);
+    }
+
+    function renderThemeToggleIcon(toggleEl, darkMode) {
+        if (!toggleEl) {
+            return;
+        }
+
+        toggleEl.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    }
+
+    function applyResolvedTheme() {
+        if (!storage || typeof storage.getCurrentProfile !== 'function') {
+            return false;
+        }
+
+        const profile = storage.getCurrentProfile();
+        const darkMode = resolveDarkMode(profile);
+        document.body.classList.toggle('dark-mode', darkMode);
+        renderThemeToggleIcon(document.getElementById('dark-mode-toggle'), darkMode);
+        return darkMode;
+    }
 
     function initSpaceTheme() {
         document.body.classList.add('space-theme');
@@ -121,6 +162,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    window.HabitTrackerUI = {
+        resolveDarkMode,
+        renderThemeToggleIcon,
+        applyResolvedTheme
+    };
+
+    applyResolvedTheme();
+
     initSpaceTheme();
     initMobileMenu();
+
+    if (window.matchMedia) {
+        const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const syncAutoTheme = function() {
+            if (!storage || typeof storage.getCurrentProfile !== 'function' || typeof storage.setDarkMode !== 'function') {
+                return;
+            }
+
+            const profile = storage.getCurrentProfile();
+            const theme = profile && profile.settings ? profile.settings.theme : 'light';
+            if (theme !== 'auto') {
+                return;
+            }
+
+            const darkMode = resolveDarkMode(profile);
+            storage.setDarkMode(darkMode);
+            document.body.classList.toggle('dark-mode', darkMode);
+            renderThemeToggleIcon(document.getElementById('dark-mode-toggle'), darkMode);
+        };
+
+        if (typeof colorSchemeQuery.addEventListener === 'function') {
+            colorSchemeQuery.addEventListener('change', syncAutoTheme);
+        } else if (typeof colorSchemeQuery.addListener === 'function') {
+            colorSchemeQuery.addListener(syncAutoTheme);
+        }
+    }
 });

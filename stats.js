@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const storage = window.HabitTrackerStorage;
+    const ui = window.HabitTrackerUI || {};
     const profile = storage.getCurrentProfile();
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const totalHabitsEl = document.getElementById('total-habits');
@@ -12,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const statsBestHabitEl = document.getElementById('stats-best-habit');
 
     let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
-    let darkMode = profile.darkMode;
+    let darkMode = typeof ui.resolveDarkMode === 'function' ? ui.resolveDarkMode(profile) : profile.darkMode;
     let monthlyChart = null;
     let yearlyChart = null;
     let categoryChart = null;
@@ -21,7 +22,11 @@ document.addEventListener('DOMContentLoaded', function() {
         darkMode = !darkMode;
         document.body.classList.toggle('dark-mode', darkMode);
         storage.setDarkMode(darkMode);
-        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        if (typeof ui.renderThemeToggleIcon === 'function') {
+            ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+        } else {
+            darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        }
     }
 
     function updateStats() {
@@ -241,7 +246,11 @@ document.addEventListener('DOMContentLoaded', function() {
     darkModeToggle.addEventListener('click', toggleDarkMode);
 
     document.body.classList.toggle('dark-mode', darkMode);
-    darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    if (typeof ui.renderThemeToggleIcon === 'function') {
+        ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+    } else {
+        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    }
     updateStats();
     renderMonthlyChart();
     renderYearlyChart();

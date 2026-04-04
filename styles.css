@@ -3360,7 +3360,7 @@ body.dark-mode #cal-event-note {
     --glass-dark: rgba(10, 17, 35, 0.56);
 }
 
-body.space-theme {
+body.space-theme.dark-mode {
     background:
         radial-gradient(circle at 15% 10%, rgba(115, 160, 255, 0.2), transparent 32%),
         radial-gradient(circle at 80% 12%, rgba(130, 92, 255, 0.18), transparent 38%),
@@ -3446,19 +3446,19 @@ body.space-theme {
     100% { transform: translateX(8%); }
 }
 
-body.space-theme .navbar,
-body.space-theme .sidebar,
-body.space-theme .panel-card,
-body.space-theme .settings-section,
-body.space-theme .add-habit,
-body.space-theme .habit-item,
-body.space-theme .stat-card,
-body.space-theme .planner-panel,
-body.space-theme .domain-card,
-body.space-theme .hero-dashboard-card,
-body.space-theme .chart-section,
-body.space-theme .profile-item,
-body.space-theme .profile-summary-card {
+body.space-theme.dark-mode .navbar,
+body.space-theme.dark-mode .sidebar,
+body.space-theme.dark-mode .panel-card,
+body.space-theme.dark-mode .settings-section,
+body.space-theme.dark-mode .add-habit,
+body.space-theme.dark-mode .habit-item,
+body.space-theme.dark-mode .stat-card,
+body.space-theme.dark-mode .planner-panel,
+body.space-theme.dark-mode .domain-card,
+body.space-theme.dark-mode .hero-dashboard-card,
+body.space-theme.dark-mode .chart-section,
+body.space-theme.dark-mode .profile-item,
+body.space-theme.dark-mode .profile-summary-card {
     background: linear-gradient(160deg, rgba(18, 29, 56, 0.72), rgba(15, 24, 47, 0.58));
     border: 1px solid rgba(123, 180, 255, 0.22);
     box-shadow:
@@ -3467,92 +3467,154 @@ body.space-theme .profile-summary-card {
     backdrop-filter: blur(16px);
 }
 
-body.space-theme .nav-link,
-body.space-theme .nav-logo,
-body.space-theme h1,
-body.space-theme h2,
-body.space-theme h3,
-body.space-theme strong,
-body.space-theme p,
-body.space-theme small,
-body.space-theme span,
-body.space-theme label {
-    color: #eaf1ff;
-}
-
-body.space-theme .section-chip,
-body.space-theme .domain-rate,
-body.space-theme #rank-badge {
+body.space-theme.dark-mode .section-chip,
+body.space-theme.dark-mode .domain-rate,
+body.space-theme.dark-mode #rank-badge {
     background: linear-gradient(135deg, rgba(102, 227, 255, 0.2), rgba(141, 123, 255, 0.2));
     border: 1px solid rgba(140, 195, 255, 0.35);
     color: #d9edff;
 }
 
-body.space-theme button,
-body.space-theme .btn-secondary,
-body.space-theme .hero-link-btn,
-body.space-theme .domain-chip,
-body.space-theme .filter-pill {
+body.space-theme.dark-mode .btn-secondary,
+body.space-theme.dark-mode .hero-link-btn,
+body.space-theme.dark-mode .domain-chip,
+body.space-theme.dark-mode .filter-pill {
     border: 1px solid rgba(130, 190, 255, 0.32);
     background: linear-gradient(135deg, rgba(34, 61, 110, 0.7), rgba(27, 44, 80, 0.72));
     color: #e8f5ff;
     box-shadow: 0 8px 20px rgba(7, 15, 35, 0.35);
 }
 
-body.space-theme button:hover,
-body.space-theme .btn-secondary:hover,
-body.space-theme .hero-link-btn:hover,
-body.space-theme .domain-chip:hover,
-body.space-theme .filter-pill:hover {
+body.space-theme.dark-mode .btn-secondary:hover,
+body.space-theme.dark-mode .hero-link-btn:hover,
+body.space-theme.dark-mode .domain-chip:hover,
+body.space-theme.dark-mode .filter-pill:hover {
     transform: translateY(-2px);
     box-shadow: 0 14px 28px rgba(17, 38, 78, 0.45);
     border-color: rgba(102, 227, 255, 0.6);
 }
 
-body.space-theme input,
-body.space-theme select,
-body.space-theme textarea {
+body.space-theme.dark-mode input,
+body.space-theme.dark-mode select,
+body.space-theme.dark-mode textarea {
     background: rgba(13, 20, 40, 0.72);
     border: 1px solid rgba(120, 180, 255, 0.28);
     color: #eaf1ff;
 }
 
-body.space-theme input::placeholder,
-body.space-theme textarea::placeholder {
+body.space-theme.dark-mode input::placeholder,
+body.space-theme.dark-mode textarea::placeholder {
     color: rgba(213, 229, 255, 0.62);
 }
 
-body.space-theme .mini-progress-bar,
-body.space-theme .hero-progress-bar,
-body.space-theme .rank-progress-track {
+body.space-theme.dark-mode .mini-progress-bar,
+body.space-theme.dark-mode .hero-progress-bar,
+body.space-theme.dark-mode .rank-progress-track {
     background: rgba(132, 179, 255, 0.2);
 }
 
-body.space-theme .mini-progress-bar span,
-body.space-theme .hero-progress-bar span,
-body.space-theme .rank-progress-track span {
+body.space-theme.dark-mode .mini-progress-bar span,
+body.space-theme.dark-mode .hero-progress-bar span,
+body.space-theme.dark-mode .rank-progress-track span {
     background: linear-gradient(90deg, var(--space-neon), var(--space-neon-2), var(--space-neon-3));
 }
 
-body.space-theme .summary-row-card,
-body.space-theme .domain-list-item,
-body.space-theme .planner-item,
-body.space-theme .mini-progress-card,
-body.space-theme .achievement,
-body.space-theme .achievement-detail-card {
+body.space-theme.dark-mode .summary-row-card,
+body.space-theme.dark-mode .domain-list-item,
+body.space-theme.dark-mode .planner-item,
+body.space-theme.dark-mode .mini-progress-card,
+body.space-theme.dark-mode .achievement,
+body.space-theme.dark-mode .achievement-detail-card {
     background: linear-gradient(140deg, rgba(23, 36, 68, 0.64), rgba(20, 32, 58, 0.52));
     border: 1px solid rgba(121, 181, 255, 0.2);
 }
 
-body.space-theme .achievement-detail-card.unlocked,
-body.space-theme .planner-item.completed,
-body.space-theme .rank-arena-card.rank-up-active {
+body.space-theme.dark-mode .achievement-detail-card.unlocked,
+body.space-theme.dark-mode .planner-item.completed,
+body.space-theme.dark-mode .rank-arena-card.rank-up-active {
     box-shadow: 0 0 0 1px rgba(102, 227, 255, 0.4), 0 0 30px rgba(102, 227, 255, 0.26);
 }
 
-body.space-theme .site-footer {
+body.space-theme.dark-mode .site-footer {
     background: linear-gradient(180deg, rgba(9, 15, 30, 0.2), rgba(5, 9, 20, 0.75));
     border-top: 1px solid rgba(130, 183, 255, 0.2);
+}
+
+body.space-theme:not(.dark-mode) {
+    background:
+        radial-gradient(circle at 12% 10%, rgba(114, 175, 255, 0.2), transparent 35%),
+        radial-gradient(circle at 84% 16%, rgba(96, 224, 255, 0.16), transparent 40%),
+        radial-gradient(circle at 48% 88%, rgba(91, 193, 255, 0.14), transparent 30%),
+        linear-gradient(145deg, #dff3ff, #eef8ff 45%, #e2f1ff);
+    color: #142949;
+}
+
+body.space-theme:not(.dark-mode) .navbar,
+body.space-theme:not(.dark-mode) .sidebar,
+body.space-theme:not(.dark-mode) .panel-card,
+body.space-theme:not(.dark-mode) .settings-section,
+body.space-theme:not(.dark-mode) .add-habit,
+body.space-theme:not(.dark-mode) .habit-item,
+body.space-theme:not(.dark-mode) .stat-card,
+body.space-theme:not(.dark-mode) .planner-panel,
+body.space-theme:not(.dark-mode) .domain-card,
+body.space-theme:not(.dark-mode) .hero-dashboard-card,
+body.space-theme:not(.dark-mode) .chart-section,
+body.space-theme:not(.dark-mode) .profile-item,
+body.space-theme:not(.dark-mode) .profile-summary-card {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(239, 248, 255, 0.78));
+    border: 1px solid rgba(88, 154, 235, 0.24);
+    box-shadow:
+        0 16px 35px rgba(29, 101, 184, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(14px);
+}
+
+body.space-theme:not(.dark-mode) .section-chip,
+body.space-theme:not(.dark-mode) .domain-rate,
+body.space-theme:not(.dark-mode) #rank-badge {
+    background: linear-gradient(135deg, rgba(102, 191, 255, 0.28), rgba(143, 196, 255, 0.26));
+    border: 1px solid rgba(71, 139, 224, 0.35);
+    color: #13386b;
+}
+
+body.space-theme:not(.dark-mode) .btn-secondary,
+body.space-theme:not(.dark-mode) .hero-link-btn,
+body.space-theme:not(.dark-mode) .domain-chip,
+body.space-theme:not(.dark-mode) .filter-pill {
+    border: 1px solid rgba(84, 151, 232, 0.32);
+    background: linear-gradient(135deg, rgba(241, 249, 255, 0.95), rgba(219, 238, 255, 0.9));
+    color: #1a3e71;
+    box-shadow: 0 8px 18px rgba(35, 112, 194, 0.14);
+}
+
+body.space-theme:not(.dark-mode) input,
+body.space-theme:not(.dark-mode) select,
+body.space-theme:not(.dark-mode) textarea {
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(84, 151, 232, 0.3);
+    color: #17345f;
+}
+
+body.space-theme:not(.dark-mode) input::placeholder,
+body.space-theme:not(.dark-mode) textarea::placeholder {
+    color: rgba(31, 82, 145, 0.58);
+}
+
+.nav-right #dark-mode-toggle {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+body.dark-mode .nav-right #dark-mode-toggle {
+    background: linear-gradient(135deg, #4dabf7, #3d8dd4);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(77, 171, 247, 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const storage = window.HabitTrackerStorage;
+    const ui = window.HabitTrackerUI || {};
     const cloud = window.HabitTrackerCloud;
     let profile = storage.getCurrentProfile();
     const habitInput = document.getElementById('habit-input');
@@ -86,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const focusMinuteCardsEl = document.getElementById('focus-minute-cards');
 
     let habits = HabitTrackerData.normalizeHabits(profile.habits || []);
-    let darkMode = profile.darkMode;
+    let darkMode = typeof ui.resolveDarkMode === 'function' ? ui.resolveDarkMode(profile) : profile.darkMode;
     let categories = profile.categories || HabitTrackerData.DEFAULT_CATEGORIES;
     let progressChart = null;
     let currentFilter = 'all';
@@ -454,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function reloadFromCurrentProfile() {
         profile = storage.getCurrentProfile();
         habits = HabitTrackerData.normalizeHabits(profile.habits || []);
-        darkMode = profile.darkMode;
+        darkMode = typeof ui.resolveDarkMode === 'function' ? ui.resolveDarkMode(profile) : profile.darkMode;
         categories = profile.categories || HabitTrackerData.DEFAULT_CATEGORIES;
         profileSettings = {
             ...storage.DEFAULT_SETTINGS,
@@ -470,7 +471,11 @@ document.addEventListener('DOMContentLoaded', function() {
         updateCategorySelect();
         renderSuggestionChips();
         document.body.classList.toggle('dark-mode', darkMode);
-        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        if (typeof ui.renderThemeToggleIcon === 'function') {
+            ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+        } else {
+            darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        }
         scheduleRefresh();
     }
 
@@ -486,7 +491,11 @@ document.addEventListener('DOMContentLoaded', function() {
         darkMode = !darkMode;
         document.body.classList.toggle('dark-mode', darkMode);
         storage.setDarkMode(darkMode);
-        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        if (typeof ui.renderThemeToggleIcon === 'function') {
+            ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+        } else {
+            darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        }
     }
 
     function updateCategorySelect() {
@@ -1887,7 +1896,11 @@ document.addEventListener('DOMContentLoaded', function() {
     saveCategories();
     setFilter('all');
     document.body.classList.toggle('dark-mode', darkMode);
-    darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    if (typeof ui.renderThemeToggleIcon === 'function') {
+        ui.renderThemeToggleIcon(darkModeToggle, darkMode);
+    } else {
+        darkModeToggle.innerHTML = darkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    }
     updateCategorySelect();
     updateLiveDateTime();
     setInterval(updateLiveDateTime, 1000);
