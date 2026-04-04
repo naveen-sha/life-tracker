@@ -1,6 +1,6 @@
 (function() {
     const STORAGE_KEY = 'lifeTrackerProfiles';
-    const DEFAULT_CATEGORIES = ['General', 'Health', 'Productivity', 'Learning'];
+    const DEFAULT_CATEGORIES = ['General', 'Gym', 'Health', 'Productivity', 'Learning'];
     const DEFAULT_SETTINGS = {
         theme: 'light',
         reminders: false,

@@ -1,5 +1,5 @@
 (function() {
-    const DEFAULT_CATEGORIES = ['General', 'Health', 'Productivity', 'Learning'];
+    const DEFAULT_CATEGORIES = ['General', 'Gym', 'Health', 'Productivity', 'Learning'];
     const QUOTES = [
         '"The journey of a thousand miles begins with a single step." - Lao Tzu',
         '"Success is the sum of small efforts repeated day in and day out." - Robert Collier',
@@ -233,9 +233,10 @@
         const categories = categoriesInput && categoriesInput.length ? categoriesInput : DEFAULT_CATEGORIES;
         const suggestionMap = {
             General: ['Plan tomorrow', 'Read 10 pages', 'Evening reflection'],
+            Gym: ['Strength training', 'Mobility 10 min', 'Core workout'],
             Health: ['Drink water', 'Stretch 10 min', 'Walk after lunch'],
             Productivity: ['Deep work block', 'Inbox zero', 'Top 3 tasks'],
-            Learning: ['Practice coding', 'Flashcards', 'Watch a tutorial']
+            Learning: ['Practice coding', 'Flashcards', 'Watch a tutorial', 'Write study notes']
         };
 
         const suggestions = categories.flatMap(category => suggestionMap[category] || [`${category} review`]);

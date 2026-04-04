@@ -86,6 +86,7 @@
             <input type="text" id="habit-input" placeholder="Enter a new habit">
             <select id="category-select">
                 <option value="General">General</option>
+                <option value="Gym">Gym</option>
                 <option value="Health">Health</option>
                 <option value="Productivity">Productivity</option>
                 <option value="Learning">Learning</option>
@@ -132,9 +133,37 @@
                 <button class="filter-pill" data-filter="today">Done Today</button>
                 <button class="filter-pill" data-filter="pending">Pending Today</button>
                 <button class="filter-pill" data-filter="high-streak">7+ Streak</button>
+                <button class="filter-pill" data-filter="gym">Gym</button>
+                <button class="filter-pill" data-filter="learning">Learning</button>
             </div>
             <p id="habit-count-status" class="settings-caption">0 habits shown</p>
             <div id="suggestion-chips" class="suggestion-chips"></div>
+        </section>
+        <section class="domain-command-center">
+            <div class="section-title-row">
+                <h2><i class="fas fa-layer-group"></i> Gym + Learning Command Center</h2>
+                <span class="section-chip">Responsive on mobile, tablet, desktop</span>
+            </div>
+            <div class="domain-grid">
+                <article class="domain-card gym-domain">
+                    <div class="domain-head">
+                        <h3><i class="fas fa-dumbbell"></i> Gym Tracker</h3>
+                        <span id="gym-domain-rate" class="domain-rate">0% this week</span>
+                    </div>
+                    <p id="gym-domain-copy" class="domain-copy">Create your gym routine and keep a clean weekly streak.</p>
+                    <div id="gym-domain-quick-add" class="domain-actions"></div>
+                    <div id="gym-domain-list" class="domain-list"></div>
+                </article>
+                <article class="domain-card learning-domain">
+                    <div class="domain-head">
+                        <h3><i class="fas fa-book-open"></i> Learning Tracker</h3>
+                        <span id="learning-domain-rate" class="domain-rate">0% this week</span>
+                    </div>
+                    <p id="learning-domain-copy" class="domain-copy">Track focused learning sessions and show consistent growth.</p>
+                    <div id="learning-domain-quick-add" class="domain-actions"></div>
+                    <div id="learning-domain-list" class="domain-list"></div>
+                </article>
+            </div>
         </section>
         <div class="stats-section">
             <h2><i class="fas fa-chart-line"></i> Quick Stats</h2>

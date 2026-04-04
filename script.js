@@ -22,6 +22,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const suggestionChipsEl = document.getElementById('suggestion-chips');
     const quickFiltersEl = document.getElementById('quick-filters');
     const habitCountStatusEl = document.getElementById('habit-count-status');
+    const gymDomainRateEl = document.getElementById('gym-domain-rate');
+    const gymDomainCopyEl = document.getElementById('gym-domain-copy');
+    const gymDomainQuickAddEl = document.getElementById('gym-domain-quick-add');
+    const gymDomainListEl = document.getElementById('gym-domain-list');
+    const learningDomainRateEl = document.getElementById('learning-domain-rate');
+    const learningDomainCopyEl = document.getElementById('learning-domain-copy');
+    const learningDomainQuickAddEl = document.getElementById('learning-domain-quick-add');
+    const learningDomainListEl = document.getElementById('learning-domain-list');
     const dashboardWelcomeEl = document.getElementById('dashboard-welcome');
     const dashboardSubtitleEl = document.getElementById('dashboard-subtitle');
     const achievementProgressTextEl = document.getElementById('achievement-progress-text');
@@ -79,6 +87,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function saveCategories() {
         storage.saveCategories(categories);
+    }
+
+    function ensureCoreCategories() {
+        ['Gym', 'Learning'].forEach(required => {
+            if (!categories.includes(required)) {
+                categories.push(required);
+            }
+        });
     }
 
     function toggleDarkMode() {
@@ -176,6 +192,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 return habit.streak >= 7;
             }
 
+            if (currentFilter === 'gym') {
+                return habit.category.toLowerCase() === 'gym';
+            }
+
+            if (currentFilter === 'learning') {
+                return habit.category.toLowerCase() === 'learning';
+            }
+
             return true;
         });
     }
@@ -225,6 +249,93 @@ document.addEventListener('DOMContentLoaded', function() {
         renderFocusHabit();
         renderNextAchievements();
         renderCategoryHighlights();
+        renderDomainCommandCenter();
+    }
+
+    function getCategoryWeeklyRate(categoryName) {
+        const targetCategory = categoryName.toLowerCase();
+        const categoryHabits = habits.filter(habit => habit.category.toLowerCase() === targetCategory);
+        if (!categoryHabits.length) {
+            return 0;
+        }
+
+        const last7Days = HabitTrackerData.getLastNDays(7);
+        const completed = last7Days.reduce((sum, day) => {
+            return sum + categoryHabits.reduce((count, habit) => count + (habit.history.includes(day) ? 1 : 0), 0);
+        }, 0);
+
+        const capacity = categoryHabits.length * 7;
+        return capacity ? Math.round((completed / capacity) * 100) : 0;
+    }
+
+    function renderDomainCard(categoryName, rateEl, copyEl, quickAddEl, listEl, templates) {
+        if (!rateEl || !copyEl || !quickAddEl || !listEl) {
+            return;
+        }
+
+        const targetCategory = categoryName.toLowerCase();
+        const categoryHabits = habits
+            .filter(habit => habit.category.toLowerCase() === targetCategory)
+            .sort((a, b) => b.streak - a.streak || b.history.length - a.history.length);
+
+        const weeklyRate = getCategoryWeeklyRate(categoryName);
+        rateEl.textContent = `${weeklyRate}% this week`;
+
+        if (!categoryHabits.length) {
+            copyEl.textContent = `No ${categoryName.toLowerCase()} habits yet. Add one quick start and begin your streak.`;
+        } else {
+            copyEl.textContent = `${categoryHabits.length} habits tracked. Best streak: ${categoryHabits[0].streak} days.`;
+        }
+
+        quickAddEl.innerHTML = '';
+        templates.forEach(template => {
+            const button = document.createElement('button');
+            button.className = 'domain-chip';
+            button.textContent = template;
+            button.addEventListener('click', function() {
+                addHabit(template, categoryName);
+            });
+            quickAddEl.appendChild(button);
+        });
+
+        listEl.innerHTML = '';
+        if (!categoryHabits.length) {
+            listEl.innerHTML = '<div class="mini-message-card">Nothing here yet. Use a quick action above.</div>';
+            return;
+        }
+
+        categoryHabits.slice(0, 4).forEach(habit => {
+            const item = document.createElement('div');
+            item.className = 'domain-list-item';
+            item.innerHTML = `
+                <div>
+                    <strong>${escapeHtml(habit.name)}</strong>
+                    <p>${habit.history.length} total check-ins</p>
+                </div>
+                <span>${habit.streak}d streak</span>
+            `;
+            listEl.appendChild(item);
+        });
+    }
+
+    function renderDomainCommandCenter() {
+        renderDomainCard(
+            'Gym',
+            gymDomainRateEl,
+            gymDomainCopyEl,
+            gymDomainQuickAddEl,
+            gymDomainListEl,
+            ['Upper body', 'Lower body', 'Cardio 20 min', 'Mobility 10 min']
+        );
+
+        renderDomainCard(
+            'Learning',
+            learningDomainRateEl,
+            learningDomainCopyEl,
+            learningDomainQuickAddEl,
+            learningDomainListEl,
+            ['Read 20 pages', 'Practice coding', 'Flashcards', 'Revision notes']
+        );
     }
 
     function showUndoToast(message, onUndo) {
@@ -761,6 +872,7 @@ document.addEventListener('DOMContentLoaded', function() {
         storage.setMeta('lastReset', today);
     }
 
+    ensureCoreCategories();
     normalizeHabitsState();
     saveHabits();
     saveCategories();
